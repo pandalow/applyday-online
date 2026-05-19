@@ -1,11 +1,9 @@
-import 'dotenv/config';
-import { PGlite } from "@electric-sql/pglite";
-import { drizzle } from "drizzle-orm/pglite";
-import * as schema from "@/app/db/schema";
+import 'dotenv/config'
+import { drizzle } from 'drizzle-orm/postgres-js'
+import postgres from 'postgres'
+import * as schema from '@/app/db/schema'
 
-const client = new PGlite();
-// Uncomment to use a local db on your machine. This does not work with StackBlitz.
-// const client = new PGlite("src/database/data.db");
-const db = drizzle(client, { schema });
+// Transaction mode pooler (Supabase port 6543) — prepare:false required for pgBouncer
+const client = postgres(process.env.DATABASE_URL!, { prepare: false })
 
-export { db, client };
+export const db = drizzle(client, { schema })
