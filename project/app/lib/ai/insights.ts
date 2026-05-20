@@ -1,5 +1,6 @@
-import { ChatOpenAI } from '@langchain/openai'
 import { PromptTemplate } from '@langchain/core/prompts'
+import { createLLM } from '@/app/lib/ai/llm'
+import type { AIProvider } from '@/app/lib/aiConfig'
 
 const LANGUAGE_MAP: Record<string, string> = {
   en: 'English', zh: 'Chinese (中文)', english: 'English', chinese: 'Chinese (中文)',
@@ -34,22 +35,17 @@ Analyze structured market data and optionally compare against a candidate resume
   inputVariables: ['data', 'resume_text', 'language'],
 })
 
-function getLLM() {
-  return new ChatOpenAI({
-    model: process.env.AI_MODEL ?? 'gpt-4o-mini',
-    temperature: parseFloat(process.env.AI_TEMPERATURE ?? '0'),
-    timeout: 120_000,
-    maxRetries: 2,
-  })
-}
-
 export async function generateInsights(
   data: object,
-  resumeText?: string,
-  language: string = 'en'
+  resumeText: string | undefined,
+  language: string = 'en',
+  apiKey: string,
+  provider: AIProvider = 'openai',
+  modelId = 'gpt-4o-mini',
+  reasoning = false,
 ): Promise<string> {
   const normalizedLanguage = LANGUAGE_MAP[language.toLowerCase()] ?? 'English'
-  const model = getLLM()
+  const model = createLLM(provider, apiKey, modelId, reasoning)
   const prompt = await INSIGHTS_PROMPT.format({
     data: JSON.stringify(data, null, 2),
     resume_text: resumeText ?? '',

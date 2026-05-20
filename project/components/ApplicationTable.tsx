@@ -1,16 +1,16 @@
 'use client'
 
-import { useState, useEffect, useCallback, forwardRef, useImperativeHandle } from 'react'
+import { Fragment, useState, useEffect, useCallback, forwardRef, useImperativeHandle } from 'react'
 import { useLocale } from '@/locales'
 import { STATUS_OPTIONS, STATUS_COLORS } from '@/components/applicationStatus'
 import { formatDate } from '@/app/lib/formatDate'
 import ApplicationDetail from '@/components/ApplicationDetail'
 import type { Application } from '@/components/types'
 
-type EditField = 'company' | 'jobTitle' | 'applicationDate'
+type EditField = 'company' | 'jobTitle' | 'applicationDate' | 'channel'
 type EditTarget = { id: string; field: EditField } | null
 type NotesModal = { id: string; value: string } | null
-type NewRow = { company: string; jobTitle: string; status: string; applicationDate: string; jd: string }
+type NewRow = { company: string; jobTitle: string; status: string; applicationDate: string; channel: string; jd: string }
 
 export interface ApplicationTableHandle {
   addRow: () => void
@@ -107,6 +107,7 @@ const ApplicationTable = forwardRef<ApplicationTableHandle, Props>(
         jobTitle: '',
         status: 'prepared',
         applicationDate: new Date().toISOString().split('T')[0],
+        channel: '',
         jd: '',
       })
     }
@@ -119,6 +120,7 @@ const ApplicationTable = forwardRef<ApplicationTableHandle, Props>(
         jobTitle: newRow.jobTitle.trim(),
         status: newRow.status,
         applicationDate: newRow.applicationDate,
+        channel: newRow.channel.trim() || undefined,
         stageNotes: undefined,
       })
       if (appId && newRow.jd.trim()) {
@@ -156,10 +158,11 @@ const ApplicationTable = forwardRef<ApplicationTableHandle, Props>(
           <table className="w-full text-sm border-collapse">
             <thead>
               <tr className="bg-zinc-50 dark:bg-zinc-800/60 border-b border-zinc-200 dark:border-zinc-700">
-                <th className={`${thCls} w-[20%]`}>{t('company')}</th>
-                <th className={`${thCls} w-[20%]`}>{t('jobTitle')}</th>
-                <th className={`${thCls} w-[13%]`}>{t('status')}</th>
-                <th className={`${thCls} w-[14%]`}>{t('applicationDate')}</th>
+                <th className={`${thCls} w-[18%]`}>{t('company')}</th>
+                <th className={`${thCls} w-[18%]`}>{t('jobTitle')}</th>
+                <th className={`${thCls} w-[11%]`}>{t('channel')}</th>
+                <th className={`${thCls} w-[12%]`}>{t('status')}</th>
+                <th className={`${thCls} w-[12%]`}>{t('applicationDate')}</th>
                 <th className={thCls}>{t('stageNotes')}</th>
                 <th className="w-16" />
               </tr>
@@ -167,9 +170,8 @@ const ApplicationTable = forwardRef<ApplicationTableHandle, Props>(
 
             <tbody className="divide-y divide-zinc-100 dark:divide-zinc-700/60">
               {applications.map(app => (
-                <>
+                <Fragment key={app.id}>
                 <tr
-                  key={app.id}
                   className={`group transition-colors hover:bg-zinc-50 dark:hover:bg-zinc-800/40 ${isSaving(app.id) ? 'opacity-50' : ''} ${expandedId === app.id ? 'bg-indigo-50/40 dark:bg-indigo-900/10' : ''}`}
                 >
                   <td className="px-2 py-1.5">
@@ -194,6 +196,19 @@ const ApplicationTable = forwardRef<ApplicationTableHandle, Props>(
                       onStartEdit={() => { setEditing({ id: app.id, field: 'jobTitle' }); setEditValue(app.jobTitle) }}
                       onChange={setEditValue}
                       onCommit={() => commitEdit(app.id, 'jobTitle', editValue, app.jobTitle)}
+                      onCancel={() => setEditing(null)}
+                    />
+                  </td>
+
+                  <td className="px-2 py-1.5">
+                    <EditableTextCell
+                      isEditing={editing?.id === app.id && editing.field === 'channel'}
+                      value={editing?.id === app.id && editing.field === 'channel' ? editValue : (app.channel ?? '')}
+                      displayClass="text-zinc-500 dark:text-zinc-400 text-xs"
+                      title={app.channel ?? ''}
+                      onStartEdit={() => { setEditing({ id: app.id, field: 'channel' }); setEditValue(app.channel ?? '') }}
+                      onChange={setEditValue}
+                      onCommit={() => commitEdit(app.id, 'channel', editValue, app.channel ?? '')}
                       onCancel={() => setEditing(null)}
                     />
                   </td>
@@ -282,12 +297,12 @@ const ApplicationTable = forwardRef<ApplicationTableHandle, Props>(
                 </tr>
                 {expandedId === app.id && (
                   <tr key={`${app.id}-detail`}>
-                    <td colSpan={6} className="p-0 border-b border-indigo-100 dark:border-indigo-900/30 bg-indigo-50/30 dark:bg-indigo-900/5">
+                    <td colSpan={7} className="p-0 border-b border-indigo-100 dark:border-indigo-900/30 bg-indigo-50/30 dark:bg-indigo-900/5">
                       <ApplicationDetail applicationId={app.id} />
                     </td>
                   </tr>
                 )}
-                </>
+                </Fragment>
               ))}
 
               {newRow && (
@@ -312,6 +327,25 @@ const ApplicationTable = forwardRef<ApplicationTableHandle, Props>(
                         placeholder="Job Title *"
                         className={`${INPUT_CLS} placeholder-zinc-300 dark:placeholder-zinc-600`}
                       />
+                    </td>
+                    <td className="px-2 py-1.5">
+                      <input
+                        value={newRow.channel}
+                        onChange={e => setNewRow(r => r && { ...r, channel: e.target.value })}
+                        placeholder="e.g. LinkedIn"
+                        list="channel-suggestions"
+                        className={`${INPUT_CLS} placeholder-zinc-300 dark:placeholder-zinc-600`}
+                      />
+                      <datalist id="channel-suggestions">
+                        <option value="LinkedIn" />
+                        <option value="Indeed" />
+                        <option value="Boss直聘" />
+                        <option value="猎聘" />
+                        <option value="智联招聘" />
+                        <option value="内推" />
+                        <option value="官网" />
+                        <option value="Referral" />
+                      </datalist>
                     </td>
                     <td className="px-2 py-1.5">
                       <select
@@ -349,7 +383,7 @@ const ApplicationTable = forwardRef<ApplicationTableHandle, Props>(
                     </td>
                   </tr>
                   <tr className="bg-indigo-50/30 dark:bg-indigo-900/5">
-                    <td colSpan={6} className="px-3 pb-3 pt-1">
+                    <td colSpan={7} className="px-3 pb-3 pt-1">
                       <textarea
                         value={newRow.jd}
                         onChange={e => setNewRow(r => r && { ...r, jd: e.target.value })}

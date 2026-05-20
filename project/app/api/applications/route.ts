@@ -60,7 +60,7 @@ export async function POST(request: NextRequest) {
 
   try {
     const body = await request.json()
-    const { company, jobTitle, applicationDate, status, stageNotes } = body
+    const { company, jobTitle, applicationDate, status, stageNotes, channel } = body
 
     if (!company || !jobTitle) {
       return Response.json(
@@ -78,6 +78,7 @@ export async function POST(request: NextRequest) {
         applicationDate: applicationDate ? new Date(applicationDate) : undefined,
         status: isValidStatus(status) ? status : 'prepared',
         stageNotes: stageNotes ?? null,
+        channel: channel ?? null,
       })
       .returning()
 

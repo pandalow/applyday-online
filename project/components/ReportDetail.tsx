@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import useSWR from 'swr'
 import { useLocale } from '@/locales'
+import { getAIConfig } from '@/app/lib/aiConfig'
 import type { AnalysisReport } from '@/components/types'
 import ReportItem from '@/components/ReportItem'
 import ReportAnalysis from '@/components/ReportAnalysis'
@@ -56,11 +57,22 @@ export default function ReportDetail() {
   const handleGenerateInsight = async () => {
     if (!selectedId) return
     setInsightError(null)
+    const cfg = getAIConfig()
+    if (!cfg?.apiKey) {
+      setInsightError('AI API key not configured. Go to Settings to add your key.')
+      return
+    }
     setGeneratingInsight(true)
     try {
       const res = await fetch(`/api/reports/${selectedId}/insight`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'X-AI-Key': cfg.apiKey,
+          'X-AI-Provider': cfg.provider,
+          'X-AI-Model': cfg.model,
+          'X-AI-Reasoning': String(cfg.reasoning),
+        },
         body: JSON.stringify({
           resumeId: insightResumeId || undefined,
           languages: insightLang,

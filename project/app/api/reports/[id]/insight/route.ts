@@ -19,6 +19,14 @@ export async function POST(
 
   if (!report) return Response.json({ error: 'Not found' }, { status: 404 })
 
+  const apiKey = request.headers.get('X-AI-Key') ?? request.headers.get('X-OpenAI-Key')
+  if (!apiKey) {
+    return Response.json({ error: 'AI API key required. Configure it in Settings.' }, { status: 401 })
+  }
+  const provider = (request.headers.get('X-AI-Provider') ?? 'openai') as import('@/app/lib/aiConfig').AIProvider
+  const modelId = request.headers.get('X-AI-Model') ?? 'gpt-4o-mini'
+  const reasoning = request.headers.get('X-AI-Reasoning') === 'true'
+
   try {
     const body = await request.json()
     const { resumeId, languages } = body as {
@@ -56,7 +64,7 @@ export async function POST(
     }
 
     // Generate AI insights
-    const content = await generateInsights(data, resumeText, language)
+    const content = await generateInsights(data, resumeText, language, apiKey, provider, modelId, reasoning)
 
     // Save as Summary record
     const [summary] = await db

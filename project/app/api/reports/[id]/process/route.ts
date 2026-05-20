@@ -45,6 +45,15 @@ export async function POST(
   if (!report) return Response.json({ error: 'Not found' }, { status: 404 })
   if (report.status !== 'pending') return Response.json({ error: 'Already processed' }, { status: 409 })
 
+  const apiKey = request.headers.get('X-AI-Key') ?? request.headers.get('X-OpenAI-Key')
+  if (!apiKey) {
+    await db.update(analysisReports).set({ status: 'failed' }).where(eq(analysisReports.id, id))
+    return Response.json({ error: 'AI API key required. Configure it in Settings.' }, { status: 401 })
+  }
+  const provider = (request.headers.get('X-AI-Provider') ?? 'openai') as import('@/app/lib/aiConfig').AIProvider
+  const modelId = request.headers.get('X-AI-Model') ?? 'gpt-4o-mini'
+  const reasoning = request.headers.get('X-AI-Reasoning') === 'true'
+
   try {
     const body = await request.json()
     const { applicationIds } = body as { applicationIds: string[] }
@@ -67,7 +76,7 @@ export async function POST(
 
       if (!jd) {
         // Auto-extract — application has JD text but no structured extraction yet
-        const extracted = await extractJobDescription(jdText.text)
+        const extracted = await extractJobDescription(jdText.text, apiKey, provider, modelId, reasoning)
 
         // Guard against race condition (double-submit)
         const existing = await db.query.jobDescriptions.findFirst({

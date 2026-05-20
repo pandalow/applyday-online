@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { useLocale } from '@/locales'
+import { getAIConfig } from '@/app/lib/aiConfig'
 import type { Application, JDText } from '@/components/types'
 import ResumeManager from '@/components/ResumeManager'
 
@@ -71,6 +72,11 @@ export default function ReportGenerator({ onSuccess }: ReportGeneratorProps) {
       setError('Select at least one application.')
       return
     }
+    const cfg = getAIConfig()
+    if (!cfg?.apiKey) {
+      setError('AI API key not configured. Go to Settings to add your key.')
+      return
+    }
     setSubmitting(true)
     try {
       const applicationIds = [...selectedIds]
@@ -90,7 +96,13 @@ export default function ReportGenerator({ onSuccess }: ReportGeneratorProps) {
       // Fire background processing — don't await
       fetch(`/api/reports/${report.id}/process`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'X-AI-Key': cfg.apiKey,
+          'X-AI-Provider': cfg.provider,
+          'X-AI-Model': cfg.model,
+          'X-AI-Reasoning': String(cfg.reasoning),
+        },
         body: JSON.stringify({ applicationIds }),
       }).catch(err => console.error('[process]', err))
 

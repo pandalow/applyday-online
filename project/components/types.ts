@@ -8,6 +8,7 @@ export type Application = {
   applicationDate: string
   createdAt: string
   stageNotes?: string
+  channel?: string
 }
 
 export type JobDescription = {

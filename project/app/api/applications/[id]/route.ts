@@ -46,13 +46,14 @@ export async function PATCH(
 
   try {
     const body = await request.json()
-    const { company, jobTitle, applicationDate, status, stageNotes } = body
+    const { company, jobTitle, applicationDate, status, stageNotes, channel } = body
 
     const updates: Partial<typeof applications.$inferInsert> = {}
     if (company !== undefined)         updates.company = company
     if (jobTitle !== undefined)        updates.jobTitle = jobTitle
     if (applicationDate !== undefined) updates.applicationDate = new Date(applicationDate)
     if (stageNotes !== undefined)      updates.stageNotes = stageNotes
+    if (channel !== undefined)         updates.channel = channel
     if (status !== undefined && isValidStatus(status)) updates.status = status
 
     if (Object.keys(updates).length === 0) {

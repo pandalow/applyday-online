@@ -1,6 +1,7 @@
-import { ChatOpenAI } from '@langchain/openai'
 import { PromptTemplate } from '@langchain/core/prompts'
 import { z } from 'zod'
+import { createLLM } from '@/app/lib/ai/llm'
+import type { AIProvider } from '@/app/lib/aiConfig'
 
 // Utility normalization functions
 const WS = /\s+/g
@@ -105,15 +106,8 @@ function normalizeExtracted(raw: ExtractedJD): ExtractedJD {
   return result
 }
 
-function getLLM() {
-  const provider = process.env.AI_PROVIDER ?? 'openai'
-  const modelName = process.env.AI_MODEL ?? 'gpt-4o-mini'
-  const temperature = parseFloat(process.env.AI_TEMPERATURE ?? '0')
-
-  if (provider === 'openai') {
-    return new ChatOpenAI({ model: modelName, temperature, timeout: 120_000, maxRetries: 2 })
-  }
-  throw new Error(`Unsupported AI provider: ${provider}`)
+function getLLM(provider: AIProvider, apiKey: string, model: string, reasoning: boolean) {
+  return createLLM(provider, apiKey, model, reasoning)
 }
 
 const EXTRACT_PROMPT = new PromptTemplate({
@@ -149,8 +143,14 @@ JD:
   inputVariables: ['jd_text'],
 })
 
-export async function extractJobDescription(jdText: string): Promise<ExtractedJD> {
-  const model = getLLM()
+export async function extractJobDescription(
+  jdText: string,
+  apiKey: string,
+  provider: AIProvider = 'openai',
+  modelId = 'gpt-4o-mini',
+  reasoning = false,
+): Promise<ExtractedJD> {
+  const model = getLLM(provider, apiKey, modelId, reasoning)
   const prompt = await EXTRACT_PROMPT.format({ jd_text: jdText })
   const response = await model.invoke(prompt)
 

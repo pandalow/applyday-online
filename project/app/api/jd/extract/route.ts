@@ -7,6 +7,13 @@ import { eq } from 'drizzle-orm'
 
 export async function POST(request: NextRequest) {
   const session = await verifySession()
+  const apiKey = request.headers.get('X-AI-Key') ?? request.headers.get('X-OpenAI-Key')
+  if (!apiKey) {
+    return Response.json({ error: 'AI API key required. Configure it in Settings.' }, { status: 401 })
+  }
+  const provider = (request.headers.get('X-AI-Provider') ?? 'openai') as import('@/app/lib/aiConfig').AIProvider
+  const modelId = request.headers.get('X-AI-Model') ?? 'gpt-4o-mini'
+  const reasoning = request.headers.get('X-AI-Reasoning') === 'true'
 
   try {
     const body = await request.json()
@@ -36,7 +43,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Call AI extraction
-    const extracted = await extractJobDescription(jdt.text)
+    const extracted = await extractJobDescription(jdt.text, apiKey, provider, modelId, reasoning)
 
     // Map snake_case ExtractedJD -> camelCase DB schema
     const [created] = await db

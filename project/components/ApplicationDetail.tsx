@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { useLocale } from '@/locales'
+import { getAIConfig } from '@/app/lib/aiConfig'
 import type { JobDescription, JDText } from '@/components/types'
 
 interface Props {
@@ -82,11 +83,22 @@ export default function ApplicationDetail({ applicationId }: Props) {
 
   const extract = async () => {
     if (!jdText) return
+    const cfg = getAIConfig()
+    if (!cfg?.apiKey) {
+      alert('AI API key not configured. Go to Settings to add your key.')
+      return
+    }
     setExtracting(true)
     try {
       const res = await fetch('/api/jd/extract', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'X-AI-Key': cfg.apiKey,
+          'X-AI-Provider': cfg.provider,
+          'X-AI-Model': cfg.model,
+          'X-AI-Reasoning': String(cfg.reasoning),
+        },
         body: JSON.stringify({ jobTextId: jdText.id }),
       })
       if (res.ok) setExtracted(await res.json())

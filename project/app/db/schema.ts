@@ -39,6 +39,7 @@ export const applications = pgTable('applications', {
   createdAt: timestamp('created_at').defaultNow().notNull(),
   status: applicationStatusEnum('status').default('prepared').notNull(),
   stageNotes: text('stage_notes'),
+  channel: varchar('channel', { length: 100 }),
 }, (t) => ({
   userIdx: index('applications_user_idx').on(t.userId),
   statusIdx: index('applications_status_idx').on(t.status),
