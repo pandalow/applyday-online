@@ -34,7 +34,6 @@ export default function Navigation() {
     { href: '/', label: t('home') },
     { href: '/app', label: t('application') },
     { href: '/report', label: t('report') },
-    { href: '/extract', label: t('extract') },
     ...(user?.role === 'admin' ? [{ href: '/admin', label: t('admin') }] : []),
   ]
 

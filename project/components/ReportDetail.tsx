@@ -20,7 +20,12 @@ export default function ReportDetail() {
   const { data, error, isLoading, mutate } = useSWR<AnalysisReport[]>(
     '/api/reports',
     fetcher,
-    { revalidateOnFocus: false },
+    {
+      revalidateOnFocus: false,
+      // Poll every 2s while any report is still generating
+      refreshInterval: (latest) =>
+        latest?.some(r => r.status === 'pending') ? 2000 : 0,
+    },
   )
 
   const [selectedId, setSelectedId] = useState<string | null>(null)
@@ -107,14 +112,22 @@ export default function ReportDetail() {
               onClick={() => setSelectedId(report.id)}
             >
               <div className="min-w-0">
-                <p className={`text-xs font-medium truncate ${isActive ? 'text-indigo-700 dark:text-indigo-300' : 'text-zinc-700 dark:text-zinc-300'}`}>
-                  Report
-                </p>
+                <div className="flex items-center gap-1.5">
+                  <p className={`text-xs font-medium truncate ${isActive ? 'text-indigo-700 dark:text-indigo-300' : 'text-zinc-700 dark:text-zinc-300'}`}>
+                    Report
+                  </p>
+                  {report.status === 'pending' && (
+                    <div className="w-2.5 h-2.5 rounded-full border-2 border-zinc-300 dark:border-zinc-600 border-t-indigo-500 animate-spin shrink-0" />
+                  )}
+                  {report.status === 'failed' && (
+                    <span className="text-[10px] text-red-500 font-medium shrink-0">failed</span>
+                  )}
+                </div>
                 <p className="text-[10px] text-zinc-400 dark:text-zinc-500">
                   {new Date(report.createdAt).toLocaleDateString()}
                 </p>
                 <p className="text-[10px] text-zinc-400 dark:text-zinc-500">
-                  {report.results?.length ?? 0} analyses
+                  {report.status === 'pending' ? 'Generating…' : `${report.results?.length ?? 0} analyses`}
                 </p>
               </div>
               <button
@@ -148,6 +161,26 @@ export default function ReportDetail() {
               </div>
             </div>
 
+            {/* Pending state */}
+            {selectedReport.status === 'pending' && (
+              <div className="flex items-center gap-3 py-16 justify-center text-zinc-400 dark:text-zinc-500">
+                <div className="w-5 h-5 rounded-full border-4 border-zinc-200 dark:border-zinc-700 border-t-indigo-500 animate-spin" />
+                <p className="text-sm">Generating report…</p>
+              </div>
+            )}
+
+            {/* Failed state */}
+            {selectedReport.status === 'failed' && (
+              <div className="py-12 text-center">
+                <p className="text-sm text-red-500 dark:text-red-400">Report generation failed.</p>
+                <p className="text-xs text-zinc-400 dark:text-zinc-500 mt-1">
+                  Make sure the selected applications have job description text attached.
+                </p>
+              </div>
+            )}
+
+            {/* Tabs — only shown for done reports */}
+            {selectedReport.status !== 'pending' && selectedReport.status !== 'failed' && (<>
             {/* Tabs */}
             <div className="flex gap-0.5 border-b border-zinc-200 dark:border-zinc-700">
               {(['viz', 'analysis'] as Tab[]).map(tab => (
@@ -253,6 +286,7 @@ export default function ReportDetail() {
                 )}
               </div>
             )}
+            </>)}
           </>
         )}
       </div>

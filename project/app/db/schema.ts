@@ -100,9 +100,12 @@ export const resumeTexts = pgTable('resume_texts', {
 }, (t) => ({ userIdx: index('resumes_user_idx').on(t.userId) }))
 
 // Analysis Reports
+export const reportStatusEnum = pgEnum('report_status', ['pending', 'done', 'failed'])
+
 export const analysisReports = pgTable('analysis_reports', {
   id: uuid('id').primaryKey().defaultRandom(),
   userId: uuid('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  status: reportStatusEnum('status').default('done').notNull(),
   createdAt: timestamp('created_at').defaultNow().notNull(),
 }, (t) => ({ userIdx: index('reports_user_idx').on(t.userId) }))
 

@@ -2,70 +2,98 @@
 
 import { useEffect, useState } from 'react'
 import { useLocale } from '@/locales'
-import type { JobDescription } from '@/components/types'
+import type { Application, JDText } from '@/components/types'
 import ResumeManager from '@/components/ResumeManager'
 
 interface ReportGeneratorProps {
   onSuccess: (reportId: string) => void
 }
 
-type Mode = 'all' | 'selected' | 'dateRange'
+type JDStatus = { hasText: boolean; hasExtraction: boolean }
 
 export default function ReportGenerator({ onSuccess }: ReportGeneratorProps) {
   const { t } = useLocale()
-  const [mode, setMode] = useState<Mode>('all')
+  const [apps, setApps] = useState<Application[]>([])
+  const [jdMap, setJdMap] = useState<Map<string, JDStatus>>(new Map())
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
   const [language, setLanguage] = useState<'en' | 'zh'>('en')
   const [selectedResumeId, setSelectedResumeId] = useState('')
-  const [jdList, setJdList] = useState<JobDescription[]>([])
-  const [selectedJdIds, setSelectedJdIds] = useState<string[]>([])
-  const [startDate, setStartDate] = useState('')
-  const [endDate, setEndDate] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    if (mode === 'selected') {
-      fetch('/api/jd')
-        .then(r => (r.ok ? r.json() : []))
-        .then((data: JobDescription[]) => setJdList(data))
-        .catch(() => setJdList([]))
-    }
-  }, [mode])
+    Promise.all([
+      fetch('/api/applications').then(r => r.ok ? r.json() : []),
+      fetch('/api/extract').then(r => r.ok ? r.json() : []),
+    ]).then(([appList, jdTexts]: [Application[], JDText[]]) => {
+      setApps(appList)
 
-  const toggleJd = (id: string) => {
-    setSelectedJdIds(prev =>
-      prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]
+      const map = new Map<string, JDStatus>()
+      for (const jdt of jdTexts) {
+        if (jdt.applicationId) {
+          map.set(jdt.applicationId, {
+            hasText: true,
+            hasExtraction: !!jdt.jobDescription,
+          })
+        }
+      }
+      setJdMap(map)
+
+      // Auto-select all apps that have JD text
+      setSelectedIds(new Set(
+        appList.filter(a => map.has(a.id)).map(a => a.id)
+      ))
+    })
+  }, [])
+
+  const appsWithJD  = apps.filter(a => jdMap.has(a.id))
+  const allSelected = appsWithJD.length > 0 && appsWithJD.every(a => selectedIds.has(a.id))
+
+  const toggleAll = () => {
+    setSelectedIds(allSelected
+      ? new Set()
+      : new Set(appsWithJD.map(a => a.id))
     )
+  }
+
+  const toggle = (id: string) => {
+    setSelectedIds(prev => {
+      const next = new Set(prev)
+      next.has(id) ? next.delete(id) : next.add(id)
+      return next
+    })
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError(null)
+    if (!selectedIds.size) {
+      setError('Select at least one application.')
+      return
+    }
     setSubmitting(true)
     try {
-      const body: Record<string, unknown> = {}
-      if (mode === 'selected') {
-        if (selectedJdIds.length === 0) throw new Error('Please select at least one job description.')
-        body.jobIds = selectedJdIds
-      } else if (mode === 'dateRange') {
-        if (startDate) body.startAt = startDate
-        if (endDate) body.endAt = endDate
-      }
-      // language + resume sent for insight generation (handled separately)
-      // but pass them for forward compatibility
-      body.language = language
-      if (selectedResumeId) body.resumeId = selectedResumeId
+      const applicationIds = [...selectedIds]
 
+      // Create pending report
       const res = await fetch('/api/reports', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
+        body: JSON.stringify({ applicationIds }),
       })
       if (!res.ok) {
         const bd = await res.json().catch(() => ({}))
         throw new Error((bd as { error?: string }).error ?? res.statusText)
       }
       const report = await res.json() as { id: string }
+
+      // Fire background processing — don't await
+      fetch(`/api/reports/${report.id}/process`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ applicationIds }),
+      }).catch(err => console.error('[process]', err))
+
       onSuccess(report.id)
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err))
@@ -82,75 +110,78 @@ export default function ReportGenerator({ onSuccess }: ReportGeneratorProps) {
         </div>
       )}
 
-      {/* Mode selection */}
+      {/* Application selector */}
       <div>
-        <label className="block text-xs font-semibold text-zinc-700 dark:text-zinc-300 mb-2 uppercase tracking-wider">
-          {t('allApplications')}
-        </label>
-        <div className="grid grid-cols-3 gap-2">
-          {(['all', 'selected', 'dateRange'] as Mode[]).map(m => (
-            <button
-              key={m}
-              type="button"
-              onClick={() => setMode(m)}
-              className={`py-2 rounded-md text-xs font-medium border transition-colors ${
-                mode === m
-                  ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300'
-                  : 'border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 hover:bg-zinc-50 dark:hover:bg-zinc-700'
-              }`}
-            >
-              {m === 'all' ? t('allApplications') : m === 'selected' ? t('selectedByIds') : t('dateRange')}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {/* Selected JDs */}
-      {mode === 'selected' && (
-        <div>
-          <label className="block text-xs font-semibold text-zinc-700 dark:text-zinc-300 mb-2 uppercase tracking-wider">
-            {t('selectJDs')} ({selectedJdIds.length} selected)
+        <div className="flex items-center justify-between mb-2">
+          <label className="text-xs font-semibold text-zinc-700 dark:text-zinc-300 uppercase tracking-wider">
+            Applications ({selectedIds.size} selected)
           </label>
-          <div className="max-h-48 overflow-y-auto space-y-1 border border-zinc-200 dark:border-zinc-700 rounded-lg p-2 bg-zinc-50 dark:bg-zinc-900">
-            {jdList.length === 0 ? (
-              <p className="text-xs text-zinc-400 dark:text-zinc-500 text-center py-3">{t('noData')}</p>
-            ) : (
-              jdList.map(jd => (
+          {appsWithJD.length > 0 && (
+            <button
+              type="button"
+              onClick={toggleAll}
+              className="text-xs text-indigo-600 dark:text-indigo-400 hover:underline"
+            >
+              {allSelected ? 'Deselect all' : 'Select all'}
+            </button>
+          )}
+        </div>
+
+        <div className="max-h-52 overflow-y-auto space-y-1 border border-zinc-200 dark:border-zinc-700 rounded-lg p-2 bg-zinc-50 dark:bg-zinc-900">
+          {apps.length === 0 ? (
+            <p className="text-xs text-zinc-400 dark:text-zinc-500 text-center py-3">{t('noData')}</p>
+          ) : (
+            apps.map(app => {
+              const status = jdMap.get(app.id)
+              const canSelect = !!status
+              return (
                 <label
-                  key={jd.id}
-                  className="flex items-center gap-2 px-2 py-1.5 rounded-md cursor-pointer hover:bg-white dark:hover:bg-zinc-800 transition-colors"
+                  key={app.id}
+                  className={`flex items-center gap-2 px-2 py-1.5 rounded-md transition-colors ${
+                    canSelect
+                      ? 'cursor-pointer hover:bg-white dark:hover:bg-zinc-800'
+                      : 'opacity-40 cursor-not-allowed'
+                  }`}
                 >
                   <input
                     type="checkbox"
-                    checked={selectedJdIds.includes(jd.id)}
-                    onChange={() => toggleJd(jd.id)}
-                    className="rounded border-zinc-300 dark:border-zinc-600 text-indigo-600"
+                    checked={selectedIds.has(app.id)}
+                    onChange={() => canSelect && toggle(app.id)}
+                    disabled={!canSelect}
+                    className="rounded border-zinc-300 dark:border-zinc-600 text-indigo-600 disabled:opacity-50"
                   />
-                  <span className="text-sm text-zinc-700 dark:text-zinc-300 truncate">
-                    {jd.role ?? '(no role)'} — {jd.company ?? '(no company)'}
+                  <span className="flex-1 min-w-0">
+                    <span className="text-sm text-zinc-800 dark:text-zinc-200 font-medium truncate block">
+                      {app.company}
+                    </span>
+                    <span className="text-xs text-zinc-500 dark:text-zinc-400 truncate block">
+                      {app.jobTitle}
+                    </span>
                   </span>
+                  {/* JD status indicator */}
+                  {status?.hasExtraction ? (
+                    <span className="shrink-0 text-xs text-green-600 dark:text-green-400 font-medium" title="Extraction ready">
+                      ✓ ready
+                    </span>
+                  ) : status?.hasText ? (
+                    <span className="shrink-0 text-xs text-yellow-600 dark:text-yellow-400 font-medium" title="Will auto-extract on generate">
+                      ⚡ extract
+                    </span>
+                  ) : (
+                    <span className="shrink-0 text-xs text-zinc-400 dark:text-zinc-500" title="No JD text — paste in application detail">
+                      no JD
+                    </span>
+                  )}
                 </label>
-              ))
-            )}
-          </div>
+              )
+            })
+          )}
         </div>
-      )}
 
-      {/* Date range */}
-      {mode === 'dateRange' && (
-        <div className="grid sm:grid-cols-2 gap-3">
-          <div>
-            <label className="block text-xs font-medium text-zinc-700 dark:text-zinc-300 mb-1">{t('startDate')}</label>
-            <input type="date" value={startDate} onChange={e => setStartDate(e.target.value)}
-              className="w-full rounded-md border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 px-3 py-2 text-sm text-zinc-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500" />
-          </div>
-          <div>
-            <label className="block text-xs font-medium text-zinc-700 dark:text-zinc-300 mb-1">{t('endDate')}</label>
-            <input type="date" value={endDate} onChange={e => setEndDate(e.target.value)}
-              className="w-full rounded-md border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 px-3 py-2 text-sm text-zinc-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500" />
-          </div>
-        </div>
-      )}
+        <p className="mt-1.5 text-[11px] text-zinc-400 dark:text-zinc-500">
+          ✓ ready = uses cached extraction · ⚡ extract = auto-extracts on generate (uses tokens) · no JD = skipped
+        </p>
+      </div>
 
       {/* Language */}
       <div>
@@ -178,7 +209,7 @@ export default function ReportGenerator({ onSuccess }: ReportGeneratorProps) {
       {/* Resume selector */}
       <div>
         <label className="block text-xs font-semibold text-zinc-700 dark:text-zinc-300 mb-2 uppercase tracking-wider">
-          {t('resume')} ({t('none')})
+          {t('resume')} ({selectedResumeId ? t('selectedResume') : t('none')})
         </label>
         <div className="border border-zinc-200 dark:border-zinc-700 rounded-xl p-3 bg-zinc-50 dark:bg-zinc-900">
           <ResumeManager
@@ -188,10 +219,9 @@ export default function ReportGenerator({ onSuccess }: ReportGeneratorProps) {
         </div>
       </div>
 
-      {/* Submit */}
       <button
         type="submit"
-        disabled={submitting}
+        disabled={submitting || !selectedIds.size}
         className="w-full py-2.5 rounded-md text-sm font-semibold text-white bg-indigo-600 hover:bg-indigo-700 dark:bg-indigo-500 dark:hover:bg-indigo-600 transition-colors disabled:opacity-50"
       >
         {submitting ? t('loading') : t('generateReport')}

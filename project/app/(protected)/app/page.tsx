@@ -1,42 +1,33 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import Dashboard from '@/components/Dashboard'
 import ApplicationControls from '@/components/ApplicationControls'
-import ApplicationItem from '@/components/ApplicationItem'
-import ApplicationForm from '@/components/ApplicationForm'
+import ApplicationTable, { type ApplicationTableHandle } from '@/components/ApplicationTable'
 import { useLocale } from '@/locales'
 import type { Application } from '@/components/types'
-
-// ---- Client component (whole page is client-side) ----
 
 function sortApplications(apps: Application[], sort: string): Application[] {
   return [...apps].sort((a, b) => {
     switch (sort) {
-      case 'company':
-        return a.company.localeCompare(b.company)
-      case 'status':
-        return a.status.localeCompare(b.status)
+      case 'company': return a.company.localeCompare(b.company)
+      case 'status':  return a.status.localeCompare(b.status)
       case '-createdAt':
-      default:
-        return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+      default:        return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
     }
   })
 }
 
 export default function ApplicationPage() {
   const { t } = useLocale()
+  const tableRef = useRef<ApplicationTableHandle>(null)
 
   const [applications, setApplications] = useState<Application[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-
-  const [search, setSearch] = useState('')
-  const [sort, setSort] = useState('-createdAt')
+  const [loading, setLoading]           = useState(true)
+  const [error, setError]               = useState<string | null>(null)
+  const [search, setSearch]             = useState('')
+  const [sort, setSort]                 = useState('-createdAt')
   const [statusFilter, setStatusFilter] = useState('')
-
-  const [showForm, setShowForm] = useState(false)
-  const [editApp, setEditApp] = useState<Application | undefined>(undefined)
 
   const fetchApplications = useCallback(async () => {
     setLoading(true)
@@ -44,8 +35,7 @@ export default function ApplicationPage() {
     try {
       const res = await fetch('/api/applications', { cache: 'no-store' })
       if (!res.ok) throw new Error(res.statusText)
-      const data: Application[] = await res.json()
-      setApplications(data)
+      setApplications(await res.json())
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err))
     } finally {
@@ -55,54 +45,56 @@ export default function ApplicationPage() {
 
   useEffect(() => { fetchApplications() }, [fetchApplications])
 
+  const handleUpdate = async (id: string, changes: Partial<Application>) => {
+    // Optimistic update
+    setApplications(prev => prev.map(a => a.id === id ? { ...a, ...changes } : a))
+    const res = await fetch(`/api/applications/${id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(changes),
+    })
+    if (!res.ok) fetchApplications() // revert on failure
+  }
+
+  const handleCreate = async (data: Omit<Application, 'id' | 'createdAt'>): Promise<string | null> => {
+    const res = await fetch('/api/applications', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    })
+    if (!res.ok) return null
+    const created: Application = await res.json()
+    fetchApplications()
+    return created.id
+  }
+
   const handleDelete = async (id: string) => {
+    setApplications(prev => prev.filter(a => a.id !== id))
     await fetch(`/api/applications/${id}`, { method: 'DELETE' })
-    fetchApplications()
   }
 
-  const handleEdit = (app: Application) => {
-    setEditApp(app)
-    setShowForm(true)
-  }
-
-  const handleFormSuccess = () => {
-    setShowForm(false)
-    setEditApp(undefined)
-    fetchApplications()
-  }
-
-  const handleCloseForm = () => {
-    setShowForm(false)
-    setEditApp(undefined)
-  }
-
-  const filtered = sortApplications(
-    applications.filter(app => {
-      const q = search.toLowerCase()
-      const matchSearch =
-        !q ||
-        app.company.toLowerCase().includes(q) ||
-        app.jobTitle.toLowerCase().includes(q)
-      const matchStatus = !statusFilter || app.status === statusFilter
-      return matchSearch && matchStatus
-    }),
-    sort,
-  )
+  const filtered = useMemo(() =>
+    sortApplications(
+      applications.filter(app => {
+        const q = search.toLowerCase()
+        const matchSearch = !q || app.company.toLowerCase().includes(q) || app.jobTitle.toLowerCase().includes(q)
+        const matchStatus = !statusFilter || app.status === statusFilter
+        return matchSearch && matchStatus
+      }),
+      sort,
+    ),
+  [applications, search, statusFilter, sort])
 
   return (
-    <div className="max-w-5xl mx-auto px-4 py-8 space-y-8">
+    <div className="max-w-6xl mx-auto px-4 py-8 space-y-8">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-zinc-900 dark:text-white">
-            {t('application')}
-          </h1>
-          <p className="text-sm text-zinc-500 dark:text-zinc-400 mt-0.5">
-            {applications.length} total applications
-          </p>
+          <h1 className="text-2xl font-bold text-zinc-900 dark:text-white">{t('application')}</h1>
+          <p className="text-sm text-zinc-500 dark:text-zinc-400 mt-0.5">{applications.length} total applications</p>
         </div>
         <button
-          onClick={() => { setEditApp(undefined); setShowForm(v => !v) }}
+          onClick={() => tableRef.current?.addRow()}
           className="inline-flex items-center gap-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold px-4 py-2.5 transition-colors shadow-sm"
         >
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -141,7 +133,7 @@ export default function ApplicationPage() {
       )}
 
       {/* Empty state */}
-      {!loading && !error && filtered.length === 0 && (
+      {!loading && !error && applications.length === 0 && (
         <div className="text-center py-16 space-y-3">
           <svg className="mx-auto w-12 h-12 text-zinc-300 dark:text-zinc-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5}
@@ -149,7 +141,7 @@ export default function ApplicationPage() {
           </svg>
           <p className="text-zinc-400 dark:text-zinc-600 text-sm">{t('noData')}</p>
           <button
-            onClick={() => { setEditApp(undefined); setShowForm(true) }}
+            onClick={() => tableRef.current?.addRow()}
             className="text-indigo-600 dark:text-indigo-400 text-sm font-medium hover:underline"
           >
             Add your first application
@@ -157,43 +149,15 @@ export default function ApplicationPage() {
         </div>
       )}
 
-      {/* Application list */}
-      {!loading && !error && filtered.length > 0 && (
-        <div className="grid sm:grid-cols-2 gap-3">
-          {filtered.map(app => (
-            <ApplicationItem
-              key={app.id}
-              application={app}
-              onEdit={handleEdit}
-              onDelete={handleDelete}
-            />
-          ))}
-        </div>
-      )}
-
-      {/* Modal overlay for form */}
-      {showForm && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
-          <div
-            className="relative w-full max-w-lg bg-white dark:bg-zinc-900 rounded-2xl shadow-2xl border border-zinc-200 dark:border-zinc-700 p-6"
-            onClick={e => e.stopPropagation()}
-          >
-            <button
-              onClick={handleCloseForm}
-              className="absolute top-4 right-4 text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 transition-colors"
-              aria-label="Close"
-            >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </button>
-            <ApplicationForm
-              application={editApp}
-              onSuccess={handleFormSuccess}
-              onCancel={handleCloseForm}
-            />
-          </div>
-        </div>
+      {/* Table */}
+      {!loading && !error && (
+        <ApplicationTable
+          ref={tableRef}
+          applications={filtered}
+          onUpdate={handleUpdate}
+          onCreate={handleCreate}
+          onDelete={handleDelete}
+        />
       )}
     </div>
   )

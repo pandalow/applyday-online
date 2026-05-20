@@ -48,6 +48,7 @@ export type Resume = {
 
 export type AnalysisReport = {
   id: string
+  status: 'pending' | 'done' | 'failed'
   createdAt: string
   results?: Array<{ id: string; name: string; result: unknown }>
   summaries?: Array<{ id: string; content: string; createdAt: string }>

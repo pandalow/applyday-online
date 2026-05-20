@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useLocale } from '@/locales'
+import { STATUS_OPTIONS } from '@/components/applicationStatus'
 import type { Application } from '@/components/types'
 
 interface ApplicationFormProps {
@@ -9,8 +10,6 @@ interface ApplicationFormProps {
   onSuccess: () => void
   onCancel: () => void
 }
-
-const STATUS_OPTIONS = ['prepared', 'applied', 'interviewed', 'offered', 'rejected'] as const
 
 export default function ApplicationForm({ application, onSuccess, onCancel }: ApplicationFormProps) {
   const { t } = useLocale()

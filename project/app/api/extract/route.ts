@@ -2,16 +2,23 @@ import { type NextRequest } from 'next/server'
 import { db } from '@/app/lib/drizzle'
 import { jobDescriptionTexts } from '@/app/db/schema'
 import { verifySession } from '@/app/lib/dal'
-import { eq, desc } from 'drizzle-orm'
+import { eq, and } from 'drizzle-orm'
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   const session = await verifySession()
+  const { searchParams } = new URL(request.url)
+  const applicationId = searchParams.get('applicationId')
 
-  const rows = await db
-    .select()
-    .from(jobDescriptionTexts)
-    .where(eq(jobDescriptionTexts.userId, session.userId))
-    .orderBy(desc(jobDescriptionTexts.createdAt))
+  const rows = await db.query.jobDescriptionTexts.findMany({
+    where: applicationId
+      ? and(
+          eq(jobDescriptionTexts.userId, session.userId),
+          eq(jobDescriptionTexts.applicationId, applicationId),
+        )
+      : eq(jobDescriptionTexts.userId, session.userId),
+    with: { jobDescription: true },
+    orderBy: (jdt, { desc }) => [desc(jdt.createdAt)],
+  })
 
   return Response.json(rows)
 }
