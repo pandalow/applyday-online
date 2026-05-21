@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useActionState } from 'react'
+import { useState, useActionState, Suspense } from 'react'
 import { useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { login } from '@/app/actions/auth'
@@ -236,7 +236,7 @@ function RsaLoginForm() {
 }
 
 // ---- Main Page ----
-export default function LoginPage() {
+function LoginContent() {
   const [tab, setTab] = useState<Tab>('password')
   const searchParams = useSearchParams()
   const oauthError = searchParams.get('error')
@@ -316,5 +316,13 @@ export default function LoginPage() {
         </p>
       </div>
     </div>
+  )
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense>
+      <LoginContent />
+    </Suspense>
   )
 }
