@@ -1,8 +1,8 @@
 import { SignJWT } from 'jose'
 
-// Challenge tokens are short-lived signed JWTs — no server-side store needed.
-// The client signs the nonce extracted from the JWT with their RSA private key.
-const secretKey = new TextEncoder().encode(process.env.SESSION_SECRET)
+const rawSecret = process.env.SESSION_SECRET
+if (!rawSecret) throw new Error('SESSION_SECRET environment variable is not set')
+const secretKey = new TextEncoder().encode(rawSecret)
 
 export async function GET() {
   const nonce = crypto.randomUUID()

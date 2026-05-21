@@ -5,7 +5,7 @@ import useSWR from 'swr'
 import { useLocale } from '@/locales'
 import { getAIConfig } from '@/app/lib/aiConfig'
 import type { AnalysisReport } from '@/components/types'
-import ReportItem from '@/components/ReportItem'
+import ReportDashboard from '@/components/ReportDashboard'
 import ReportAnalysis from '@/components/ReportAnalysis'
 import ResumeManager from '@/components/ResumeManager'
 
@@ -212,13 +212,11 @@ export default function ReportDetail() {
 
             {/* Visualizations tab */}
             {activeTab === 'viz' && (
-              <div className="space-y-4">
+              <div>
                 {!selectedReport.results?.length ? (
                   <p className="text-sm text-zinc-500 dark:text-zinc-400 text-center py-8">{t('noResults')}</p>
                 ) : (
-                  selectedReport.results.map(result => (
-                    <ReportItem key={result.id} result={result} />
-                  ))
+                  <ReportDashboard results={selectedReport.results} />
                 )}
               </div>
             )}

@@ -22,7 +22,9 @@ export const users = pgTable('users', {
   id: uuid('id').primaryKey().defaultRandom(),
   username: varchar('username', { length: 255 }).notNull().unique(),
   email: varchar('email', { length: 255 }).notNull().unique(),
-  passwordHash: varchar('password_hash', { length: 255 }).notNull(),
+  passwordHash: varchar('password_hash', { length: 255 }),
+  googleId: varchar('google_id', { length: 255 }).unique(),
+  avatarUrl: text('avatar_url'),
   rsaPublicKey: text('rsa_public_key'),
   role: userRoleEnum('role').default('user').notNull(),
   createdAt: timestamp('created_at').defaultNow().notNull(),
@@ -107,8 +109,22 @@ export const analysisReports = pgTable('analysis_reports', {
   id: uuid('id').primaryKey().defaultRandom(),
   userId: uuid('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
   status: reportStatusEnum('status').default('done').notNull(),
+  applicationIds: jsonb('application_ids').$type<string[]>().default([]),
   createdAt: timestamp('created_at').defaultNow().notNull(),
 }, (t) => ({ userIdx: index('reports_user_idx').on(t.userId) }))
+
+// Application OKRs (AI-generated per application)
+export const applicationOkrs = pgTable('application_okrs', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  applicationId: uuid('application_id').notNull().references(() => applications.id, { onDelete: 'cascade' }),
+  userId: uuid('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  language: varchar('language', { length: 10 }).default('en').notNull(),
+  content: jsonb('content').notNull(),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+}, (t) => ({
+  appIdx: index('okrs_app_idx').on(t.applicationId),
+  userIdx: index('okrs_user_idx').on(t.userId),
+}))
 
 // Analysis Results
 export const analysisResults = pgTable('analysis_results', {
@@ -135,12 +151,18 @@ export const usersRelations = relations(users, ({ many }) => ({
   analysisReports: many(analysisReports),
 }))
 
-export const applicationsRelations = relations(applications, ({ one }) => ({
+export const applicationsRelations = relations(applications, ({ one, many }) => ({
   user: one(users, { fields: [applications.userId], references: [users.id] }),
   jobDescriptionText: one(jobDescriptionTexts, {
     fields: [applications.id],
     references: [jobDescriptionTexts.applicationId],
   }),
+  okrs: many(applicationOkrs),
+}))
+
+export const applicationOkrsRelations = relations(applicationOkrs, ({ one }) => ({
+  application: one(applications, { fields: [applicationOkrs.applicationId], references: [applications.id] }),
+  user: one(users, { fields: [applicationOkrs.userId], references: [users.id] }),
 }))
 
 export const jobDescriptionTextsRelations = relations(jobDescriptionTexts, ({ one }) => ({

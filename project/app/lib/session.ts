@@ -9,6 +9,7 @@ export type SessionPayload = {
 } & JWTPayload
 
 const secretKey = process.env.SESSION_SECRET
+if (!secretKey) throw new Error('SESSION_SECRET environment variable is not set')
 const encodedKey = new TextEncoder().encode(secretKey)
 
 export async function encrypt(payload: SessionPayload): Promise<string> {

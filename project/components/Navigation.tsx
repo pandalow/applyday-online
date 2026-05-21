@@ -33,7 +33,7 @@ export default function Navigation() {
   const navLinks = [
     { href: '/', label: t('home') },
     { href: '/app', label: t('application') },
-    { href: '/report', label: t('report') },
+    { href: '/insight', label: t('insight') },
     ...(user?.role === 'admin' ? [{ href: '/admin', label: t('admin') }] : []),
   ]
 

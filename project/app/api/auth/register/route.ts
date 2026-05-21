@@ -4,9 +4,18 @@ import { users } from '@/app/db/schema'
 import { createSession } from '@/app/lib/session'
 import { eq, or } from 'drizzle-orm'
 import bcrypt from 'bcryptjs'
+import { checkRateLimit, getClientIp } from '@/app/lib/rateLimit'
 
 export async function POST(request: NextRequest) {
   try {
+    const ip = getClientIp(request)
+    if (!checkRateLimit(`register:${ip}`, 3, 300_000)) {
+      return Response.json(
+        { error: 'Too many registration attempts. Please try again later.' },
+        { status: 429 },
+      )
+    }
+
     const body = await request.json()
     const { username, email, password } = body
 
@@ -37,7 +46,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const passwordHash = await bcrypt.hash(password, 10)
+    const passwordHash = await bcrypt.hash(password, 12)
 
     const [user] = await db
       .insert(users)

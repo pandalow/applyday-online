@@ -4,9 +4,18 @@ import { users } from '@/app/db/schema'
 import { createSession } from '@/app/lib/session'
 import { eq } from 'drizzle-orm'
 import bcrypt from 'bcryptjs'
+import { checkRateLimit, getClientIp } from '@/app/lib/rateLimit'
 
 export async function POST(request: NextRequest) {
   try {
+    const ip = getClientIp(request)
+    if (!checkRateLimit(`login:${ip}`, 5, 60_000)) {
+      return Response.json(
+        { error: 'Too many login attempts. Please try again in a minute.' },
+        { status: 429 },
+      )
+    }
+
     const body = await request.json()
     const { username, password } = body
 
@@ -23,6 +32,10 @@ export async function POST(request: NextRequest) {
 
     if (!user) {
       return Response.json({ error: 'Invalid credentials' }, { status: 401 })
+    }
+
+    if (!user.passwordHash) {
+      return Response.json({ error: 'This account uses Google Sign-In. Please use "Continue with Google".' }, { status: 401 })
     }
 
     const passwordMatch = await bcrypt.compare(password, user.passwordHash)

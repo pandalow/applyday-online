@@ -1,11 +1,13 @@
 'use server'
 import { redirect } from 'next/navigation'
+import { headers } from 'next/headers'
 import { z } from 'zod'
 import bcrypt from 'bcryptjs'
 import { db } from '@/app/lib/drizzle'
 import { users } from '@/app/db/schema'
 import { eq } from 'drizzle-orm'
 import { createSession, deleteSession, verifyRSASignature } from '@/app/lib/session'
+import { checkRateLimit } from '@/app/lib/rateLimit'
 
 const LoginSchema = z.object({
   username: z.string().trim().min(1),
@@ -24,6 +26,12 @@ export type AuthState = { errors?: AuthErrors; message?: string } | undefined
 
 // Standard login: username + password
 export async function login(state: AuthState, formData: FormData): Promise<AuthState> {
+  const headerStore = await headers()
+  const ip = headerStore.get('x-forwarded-for')?.split(',')[0].trim() ?? 'unknown'
+  if (!checkRateLimit(`login:${ip}`, 5, 60_000)) {
+    return { errors: { general: ['Too many login attempts. Please try again in a minute.'] } }
+  }
+
   const validated = LoginSchema.safeParse({
     username: formData.get('username'),
     password: formData.get('password'),
@@ -38,6 +46,10 @@ export async function login(state: AuthState, formData: FormData): Promise<AuthS
   })
   if (!result) {
     return { errors: { general: ['Invalid username or password'] } }
+  }
+
+  if (!result.passwordHash) {
+    return { errors: { general: ['This account uses Google Sign-In. Please use "Continue with Google".'] } }
   }
 
   const passwordMatch = await bcrypt.compare(password, result.passwordHash)

@@ -32,7 +32,7 @@ export async function POST(request: NextRequest) {
 
     const [report] = await db
       .insert(analysisReports)
-      .values({ userId: session.userId, status: 'pending' })
+      .values({ userId: session.userId, status: 'pending', applicationIds })
       .returning()
 
     return Response.json(report, { status: 202 })

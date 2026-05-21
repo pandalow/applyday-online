@@ -25,13 +25,30 @@ const LEVEL_MAP: Record<string, string> = {
 }
 
 const ROLE_MAP: Record<string, string> = {
-  react: 'frontend', flutter: 'frontend', web: 'fullstack', cloud: 'cloud_engineer',
-  mobile: 'mobile_engineer', frontend: 'frontend', 'front-end': 'frontend',
-  backend: 'backend', 'back-end': 'backend', fullstack: 'fullstack', 'full stack': 'fullstack',
-  ml: 'data_scientist', 'machine learning': 'data_scientist', ai: 'data_scientist',
-  'artificial intelligence': 'data_scientist', data: 'data_scientist',
+  // Engineering
+  react: 'frontend', flutter: 'frontend', 'front-end': 'frontend', frontend: 'frontend',
+  'back-end': 'backend', backend: 'backend',
+  'full stack': 'fullstack', fullstack: 'fullstack', web: 'fullstack',
+  mobile: 'mobile_engineer', cloud: 'cloud_engineer',
+  ml: 'data_scientist', 'machine learning': 'data_scientist',
+  ai: 'data_scientist', 'artificial intelligence': 'data_scientist',
   qa: 'qa_engineer', test: 'qa_engineer', devops: 'devops',
-  software: 'software_engineer', application: 'software_engineer', sde: 'software_engineer',
+  software: 'software_engineer', sde: 'software_engineer',
+  // Data & Analytics
+  'data engineer': 'data_engineer', 'data analyst': 'data_analyst',
+  'data scientist': 'data_scientist', analytics: 'analyst', analyst: 'analyst',
+  // Product & Design
+  'product manager': 'product_manager', 'product owner': 'product_manager',
+  ux: 'ux_designer', 'ui designer': 'ui_designer', designer: 'designer',
+  // Business functions
+  marketing: 'marketing', 'growth': 'marketing',
+  sales: 'sales', 'account executive': 'sales', 'account manager': 'sales',
+  finance: 'finance', accounting: 'finance', 'financial analyst': 'finance',
+  'human resource': 'hr', recruiter: 'recruiter', 'talent acquisition': 'recruiter',
+  operations: 'operations', 'project manager': 'project_manager',
+  legal: 'legal', compliance: 'legal', security: 'security',
+  'customer success': 'customer_success', 'customer support': 'support',
+  content: 'content', copywriter: 'content',
 }
 
 function normalizeRole(text: string): string {
@@ -111,31 +128,51 @@ function getLLM(provider: AIProvider, apiKey: string, model: string, reasoning: 
 }
 
 const EXTRACT_PROMPT = new PromptTemplate({
-  template: `You are an information extractor. Extract job information from the following JD as JSON.
-Rules:
-- level: one of intern, junior, mid, senior, lead, manager
-- employment_type: one of full_time, contract, internship, part_time
-- remote_work: one of on-site, hybrid, remote
-- salary_eur_min/max: numeric euros (no k suffix)
-- location: "City, Country" format
-- all skill/benefits fields: array of strings
-- Return ONLY valid JSON matching this schema exactly:
+  template: `You are a precise job description parser. Extract structured data from the JD below.
+This parser handles ALL job types — engineering, marketing, finance, HR, design, operations, sales, legal, etc.
+
+## Field rules
+
+**Enums (use exactly these values):**
+- level: intern | junior | mid | senior | lead | manager  (infer from context if not explicit)
+- employment_type: full_time | contract | internship | part_time
+- remote_work: on-site | hybrid | remote
+- industry: single lowercase word/phrase (finance, healthcare, gaming, saas, e-commerce, logistics, retail, media, consulting, etc.)
+
+**Salary:** convert to EUR integers, no suffix (50000 not "50k"); null if absent.
+**location:** "City, Country" format; null if fully remote.
+
+**Skill categorisation — mutually exclusive, apply to ALL role types:**
+- required_core_skills: ALL must-have qualifications for the role — include both hard skills (financial modelling, SEO, data analysis, system design) and soft skills (stakeholder management, team leadership, written communication). Use for any role type. Short phrases, not sentences.
+- desirable_skills: ONLY items explicitly labelled optional / nice-to-have / plus / bonus / preferred.
+- frameworks_tools: named tools, platforms, or software required — for tech roles: React, Docker, Kubernetes; for non-tech roles: Salesforce, HubSpot, Tableau, Figma, SAP, Excel, Google Analytics, Jira, Asana, etc. Any named tool counts.
+- programming_languages: ONLY coding languages — Python, JavaScript, SQL, R, etc. Leave empty for non-technical roles unless coding is required.
+- cloud_platforms: AWS, GCP, Azure, and similar. Typically empty for non-tech roles.
+- databases: any data store — PostgreSQL, MongoDB, Snowflake, etc. Typically empty for non-tech roles.
+- api_protocols: REST, GraphQL, gRPC, OAuth2, etc. Typically empty for non-tech roles.
+- methodologies: work methodologies — Agile, Scrum, OKR, Six Sigma, Lean, PRINCE2, CI/CD, etc.
+- mobile_technologies: React Native, Flutter, Swift, Kotlin, etc. Only for mobile-focused roles.
+- domain_keywords: business/domain signals — fintech, B2B, SaaS, marketplace, high-growth, enterprise, D2C, regulated, startup, etc.
+- benefits: explicit perks — health insurance, flexible hours, stock options, remote-first, learning budget, etc.
+- responsibilities: short imperative phrases 3–8 words each — e.g. ["Manage paid media campaigns", "Build financial models", "Mentor junior engineers"]
+- language_requirements: spoken/written natural languages only if explicitly required — English, German, Mandarin, etc.
+
+Return ONLY valid JSON:
 {{
   "company": string|null, "role": string|null, "level": string|null,
-  "location": string|null, "employment_type": string|null,
-  "salary_eur_min": number|null, "salary_eur_max": number|null,
-  "bonus_percent": number|null, "benefits": string[],
+  "location": string|null, "employment_type": string|null, "industry": string|null,
+  "salary_eur_min": number|null, "salary_eur_max": number|null, "bonus_percent": number|null,
   "years_experience_min": number|null, "years_experience_max": number|null,
-  "education_required": string|null, "responsibilities": string[],
+  "education_required": string|null, "remote_work": string|null,
+  "work_permit_required": boolean|null, "visa_sponsorship": boolean|null,
+  "contact_person": string|null, "contact_email_or_phone": string|null,
+  "responsibilities": string[],
   "required_core_skills": string[], "desirable_skills": string[],
   "programming_languages": string[], "frameworks_tools": string[],
   "databases": string[], "cloud_platforms": string[],
   "api_protocols": string[], "methodologies": string[],
   "mobile_technologies": string[], "domain_keywords": string[],
-  "remote_work": string|null, "work_permit_required": boolean|null,
-  "visa_sponsorship": boolean|null, "contact_person": string|null,
-  "contact_email_or_phone": string|null, "industry": string|null,
-  "language_requirements": string[]
+  "benefits": string[], "language_requirements": string[]
 }}
 
 JD:
