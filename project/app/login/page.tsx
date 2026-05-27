@@ -12,6 +12,10 @@ const OAUTH_ERRORS: Record<string, string> = {
   email_not_verified: 'Your Google account email is not verified.',
 }
 
+const QUERY_MESSAGES: Record<string, string> = {
+  reset: 'Password reset successfully. You can now sign in.',
+}
+
 type Tab = 'password' | 'rsa'
 
 // ---- Password Login Form ----
@@ -44,9 +48,14 @@ function PasswordLoginForm() {
       </div>
 
       <div>
-        <label className="block text-xs font-medium text-zinc-700 dark:text-zinc-300 mb-1.5">
-          Password
-        </label>
+        <div className="flex items-center justify-between mb-1.5">
+          <label className="block text-xs font-medium text-zinc-700 dark:text-zinc-300">
+            Password
+          </label>
+          <Link href="/forgot-password" className="text-xs text-indigo-600 dark:text-indigo-400 hover:underline">
+            Forgot password?
+          </Link>
+        </div>
         <input
           type="password"
           name="password"
@@ -240,6 +249,7 @@ function LoginContent() {
   const [tab, setTab] = useState<Tab>('password')
   const searchParams = useSearchParams()
   const oauthError = searchParams.get('error')
+  const successKey = searchParams.get('reset') ? 'reset' : null
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-zinc-50 dark:bg-zinc-950 px-4 py-12">
@@ -254,6 +264,11 @@ function LoginContent() {
           </p>
         </div>
 
+        {successKey && (
+          <div className="rounded-xl bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 px-4 py-3 text-sm text-emerald-700 dark:text-emerald-400 mb-4">
+            {QUERY_MESSAGES[successKey]}
+          </div>
+        )}
         {oauthError && (
           <div className="rounded-xl bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 px-4 py-3 text-sm text-red-600 dark:text-red-400 mb-4">
             {OAUTH_ERRORS[oauthError] ?? 'Sign-in failed. Please try again.'}

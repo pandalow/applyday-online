@@ -150,8 +150,10 @@ const translations = {
     // OKR & Insight
     okrTab: 'OKR Forecast',
     okrPrep: 'OKR & Prep',
+    resumeTab: 'Resume Tailoring',
     marketReport: 'Market Report',
     insightOKRDesc: 'Generate OKRs and interview prep for each application.',
+    insightResumeDesc: 'Upload your resume and get AI-powered suggestions tailored to a specific job description.',
     insightMarketDesc: 'Analyse your JD collection with charts and AI insights.',
     generateOKR: 'Generate OKR',
     okrRequiresJD: 'JD required',
@@ -303,8 +305,10 @@ const translations = {
     // OKR & Insight
     okrTab: 'OKR 预测',
     okrPrep: 'OKR 与备考',
+    resumeTab: '简历优化',
     marketReport: '市场报告',
     insightOKRDesc: '为每个申请生成 OKR 目标和面试备考建议。',
+    insightResumeDesc: '上传简历，获取针对特定职位描述的 AI 改进建议。',
     insightMarketDesc: '通过图表和 AI 洞察分析你的职位描述集合。',
     generateOKR: '生成 OKR',
     okrRequiresJD: '需要 JD',

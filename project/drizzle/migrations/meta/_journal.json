@@ -15,6 +15,20 @@
       "when": 1779288664291,
       "tag": "0001_fast_otto_octavius",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1779876871642,
+      "tag": "0002_sparkling_the_renegades",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1779879338587,
+      "tag": "0003_cloudy_makkari",
+      "breakpoints": true
     }
   ]
 }

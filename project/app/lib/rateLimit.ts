@@ -1,33 +1,37 @@
-type Entry = { count: number; resetAt: number }
+import { Ratelimit } from '@upstash/ratelimit'
+import { Redis } from '@upstash/redis'
 
-const store = new Map<string, Entry>()
+// Gracefully degrade to a no-op if Upstash env vars are not set (local dev without Redis)
+const isConfigured = !!(process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN)
 
-setInterval(() => {
-  const now = Date.now()
-  for (const [key, entry] of store) {
-    if (entry.resetAt < now) store.delete(key)
-  }
-}, 5 * 60 * 1000).unref()
+const redis = isConfigured ? new Redis({
+  url: process.env.UPSTASH_REDIS_REST_URL!,
+  token: process.env.UPSTASH_REDIS_REST_TOKEN!,
+}) : null
+
+// Sliding window limiters per endpoint type
+const limiters = isConfigured ? {
+  login:    new Ratelimit({ redis: redis!, limiter: Ratelimit.slidingWindow(5,  '60 s'),  prefix: 'rl:login' }),
+  register: new Ratelimit({ redis: redis!, limiter: Ratelimit.slidingWindow(3,  '300 s'), prefix: 'rl:register' }),
+  forgot:   new Ratelimit({ redis: redis!, limiter: Ratelimit.slidingWindow(3,  '300 s'), prefix: 'rl:forgot' }),
+  reset:    new Ratelimit({ redis: redis!, limiter: Ratelimit.slidingWindow(5,  '60 s'),  prefix: 'rl:reset' }),
+  default:  new Ratelimit({ redis: redis!, limiter: Ratelimit.slidingWindow(20, '60 s'),  prefix: 'rl:default' }),
+} : null
+
+export type LimiterKey = keyof NonNullable<typeof limiters>
 
 /**
- * Returns true if the request is allowed, false if rate limit is exceeded.
- * @param key    Unique key, e.g. "login:192.168.1.1"
- * @param limit  Max requests allowed in the window
- * @param windowMs  Window duration in milliseconds
+ * Returns true if the request is allowed, false if rate-limited.
+ * Falls back to allowing all requests if Upstash is not configured.
  */
-export function checkRateLimit(key: string, limit: number, windowMs: number): boolean {
-  const now = Date.now()
-  const entry = store.get(key)
-
-  if (!entry || entry.resetAt < now) {
-    store.set(key, { count: 1, resetAt: now + windowMs })
-    return true
-  }
-
-  if (entry.count >= limit) return false
-
-  entry.count++
-  return true
+export async function checkRateLimit(
+  identifier: string,
+  limiterKey: LimiterKey = 'default',
+): Promise<boolean> {
+  if (!limiters) return true
+  const limiter = limiters[limiterKey] ?? limiters.default
+  const { success } = await limiter.limit(identifier)
+  return success
 }
 
 export function getClientIp(request: Request): string {

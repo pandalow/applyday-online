@@ -28,7 +28,7 @@ export type AuthState = { errors?: AuthErrors; message?: string } | undefined
 export async function login(state: AuthState, formData: FormData): Promise<AuthState> {
   const headerStore = await headers()
   const ip = headerStore.get('x-forwarded-for')?.split(',')[0].trim() ?? 'unknown'
-  if (!checkRateLimit(`login:${ip}`, 5, 60_000)) {
+  if (!await checkRateLimit(ip, 'login')) {
     return { errors: { general: ['Too many login attempts. Please try again in a minute.'] } }
   }
 

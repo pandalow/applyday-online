@@ -5,8 +5,9 @@ import { useLocale } from '@/locales'
 import ReportGenerator from '@/components/ReportGenerator'
 import ReportDetail from '@/components/ReportDetail'
 import InsightOKR from '@/components/InsightOKR'
+import InsightResume from '@/components/InsightResume'
 
-type Tab = 'okr' | 'market'
+type Tab = 'okr' | 'resume' | 'market'
 
 export default function InsightPage() {
   const { t } = useLocale()
@@ -20,15 +21,19 @@ export default function InsightPage() {
     void id
   }
 
+  const tabDesc: Record<Tab, string> = {
+    okr: t('insightOKRDesc'),
+    resume: t('insightResumeDesc'),
+    market: t('insightMarketDesc'),
+  }
+
   return (
     <div className="max-w-7xl mx-auto px-4 py-8 space-y-6">
       {/* Page header */}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-zinc-900 dark:text-white">{t('insight')}</h1>
-          <p className="text-sm text-zinc-500 dark:text-zinc-400 mt-0.5">
-            {tab === 'okr' ? t('insightOKRDesc') : t('insightMarketDesc')}
-          </p>
+          <p className="text-sm text-zinc-500 dark:text-zinc-400 mt-0.5">{tabDesc[tab]}</p>
         </div>
         {tab === 'market' && (
           <button
@@ -47,6 +52,7 @@ export default function InsightPage() {
       <div className="flex gap-1 border-b border-zinc-200 dark:border-zinc-700">
         {([
           { key: 'okr',    label: t('okrPrep') },
+          { key: 'resume', label: t('resumeTab') },
           { key: 'market', label: t('marketReport') },
         ] as { key: Tab; label: string }[]).map(({ key, label }) => (
           <button
@@ -63,10 +69,8 @@ export default function InsightPage() {
         ))}
       </div>
 
-      {/* OKR & Prep tab */}
-      {tab === 'okr' && (
-        <InsightOKR />
-      )}
+      {tab === 'okr'    && <InsightOKR />}
+      {tab === 'resume' && <InsightResume />}
 
       {/* Market Report tab */}
       {tab === 'market' && (

@@ -126,6 +126,45 @@ export const applicationOkrs = pgTable('application_okrs', {
   userIdx: index('okrs_user_idx').on(t.userId),
 }))
 
+// Password Reset Tokens
+export const passwordResetTokens = pgTable('password_reset_tokens', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  userId: uuid('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  token: varchar('token', { length: 255 }).notNull().unique(),
+  expiresAt: timestamp('expires_at').notNull(),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+})
+
+// Resume Suggestions (AI-generated per application + resume pair)
+export type SuggestionStatus = 'pending' | 'accepted' | 'dismissed'
+export type SuggestionType = 'keyword_gap' | 'quantify' | 'reframe' | 'add_section'
+export interface SuggestionItem {
+  id: string
+  type: SuggestionType
+  section: string
+  original?: string
+  text: string
+  reason: string
+  status: SuggestionStatus
+}
+
+export const resumeSuggestions = pgTable('resume_suggestions', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  applicationId: uuid('application_id').notNull().references(() => applications.id, { onDelete: 'cascade' }),
+  resumeId: uuid('resume_id').notNull().references(() => resumeTexts.id, { onDelete: 'cascade' }),
+  userId: uuid('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  suggestions: jsonb('suggestions').$type<SuggestionItem[]>().notNull(),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+}, (t) => ({
+  appIdx: index('resume_sug_app_idx').on(t.applicationId),
+}))
+
+export const resumeSuggestionsRelations = relations(resumeSuggestions, ({ one }) => ({
+  application: one(applications, { fields: [resumeSuggestions.applicationId], references: [applications.id] }),
+  resume: one(resumeTexts, { fields: [resumeSuggestions.resumeId], references: [resumeTexts.id] }),
+  user: one(users, { fields: [resumeSuggestions.userId], references: [users.id] }),
+}))
+
 // Analysis Results
 export const analysisResults = pgTable('analysis_results', {
   id: uuid('id').primaryKey().defaultRandom(),

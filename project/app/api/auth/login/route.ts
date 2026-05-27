@@ -9,7 +9,7 @@ import { checkRateLimit, getClientIp } from '@/app/lib/rateLimit'
 export async function POST(request: NextRequest) {
   try {
     const ip = getClientIp(request)
-    if (!checkRateLimit(`login:${ip}`, 5, 60_000)) {
+    if (!await checkRateLimit(ip, 'login')) {
       return Response.json(
         { error: 'Too many login attempts. Please try again in a minute.' },
         { status: 429 },
