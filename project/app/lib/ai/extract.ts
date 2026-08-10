@@ -1,4 +1,5 @@
 import { PromptTemplate } from '@langchain/core/prompts'
+import { jsonrepair } from 'jsonrepair'
 import { z } from 'zod'
 import { createLLM } from '@/app/lib/ai/llm'
 import type { AIProvider } from '@/app/lib/aiConfig'
@@ -194,7 +195,7 @@ export async function extractJobDescription(
   const content = typeof response.content === 'string' ? response.content : JSON.stringify(response.content)
   const cleaned = content.replace(/^```(?:json)?\n?/, '').replace(/\n?```$/, '').trim()
 
-  const parsed = JSON.parse(cleaned)
+  const parsed = JSON.parse(jsonrepair(cleaned))
   const validated = JDSchema.parse(parsed)
   return normalizeExtracted(validated)
 }

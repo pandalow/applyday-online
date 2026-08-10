@@ -1,3 +1,4 @@
+import { jsonrepair } from 'jsonrepair'
 import { PromptTemplate } from '@langchain/core/prompts'
 import { z } from 'zod'
 import { createLLM } from '@/app/lib/ai/llm'
@@ -108,5 +109,5 @@ export async function generateOKR(
   const response = await model.invoke(prompt)
   const content = typeof response.content === 'string' ? response.content : JSON.stringify(response.content)
   const cleaned = content.replace(/^```(?:json)?\n?/, '').replace(/\n?```$/, '').trim()
-  return OKRSchema.parse(JSON.parse(cleaned))
+  return OKRSchema.parse(JSON.parse(jsonrepair(cleaned)))
 }

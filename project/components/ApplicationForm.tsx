@@ -81,7 +81,7 @@ export default function ApplicationForm({ application, onSuccess, onCancel }: Ap
           value={company}
           onChange={e => setCompany(e.target.value)}
           placeholder="Acme Corp"
-          className="w-full rounded-md border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 px-3 py-2 text-sm text-zinc-900 dark:text-white placeholder-zinc-400 dark:placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+          className="w-full rounded-lg border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 px-3 py-2 text-sm text-zinc-900 dark:text-white placeholder-zinc-400 dark:placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-indigo-500"
         />
       </div>
 
@@ -95,7 +95,7 @@ export default function ApplicationForm({ application, onSuccess, onCancel }: Ap
           value={jobTitle}
           onChange={e => setJobTitle(e.target.value)}
           placeholder="Software Engineer"
-          className="w-full rounded-md border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 px-3 py-2 text-sm text-zinc-900 dark:text-white placeholder-zinc-400 dark:placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+          className="w-full rounded-lg border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 px-3 py-2 text-sm text-zinc-900 dark:text-white placeholder-zinc-400 dark:placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-indigo-500"
         />
       </div>
 
@@ -107,7 +107,7 @@ export default function ApplicationForm({ application, onSuccess, onCancel }: Ap
         <select
           value={status}
           onChange={e => setStatus(e.target.value)}
-          className="w-full rounded-md border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 px-3 py-2 text-sm text-zinc-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+          className="w-full rounded-lg border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 px-3 py-2 text-sm text-zinc-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
         >
           {STATUS_OPTIONS.map(s => (
             <option key={s} value={s}>
@@ -127,7 +127,7 @@ export default function ApplicationForm({ application, onSuccess, onCancel }: Ap
           onChange={e => setStageNotes(e.target.value)}
           rows={3}
           placeholder="Optional notes about this application stage…"
-          className="w-full rounded-md border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 px-3 py-2 text-sm text-zinc-900 dark:text-white placeholder-zinc-400 dark:placeholder-zinc-500 resize-y focus:outline-none focus:ring-2 focus:ring-indigo-500"
+          className="w-full rounded-lg border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 px-3 py-2 text-sm text-zinc-900 dark:text-white placeholder-zinc-400 dark:placeholder-zinc-500 resize-y focus:outline-none focus:ring-2 focus:ring-indigo-500"
         />
       </div>
 
@@ -137,14 +137,14 @@ export default function ApplicationForm({ application, onSuccess, onCancel }: Ap
           type="button"
           onClick={onCancel}
           disabled={submitting}
-          className="px-4 py-2 rounded-md text-sm font-medium text-zinc-700 dark:text-zinc-300 bg-zinc-100 dark:bg-zinc-700 hover:bg-zinc-200 dark:hover:bg-zinc-600 transition-colors disabled:opacity-50"
+          className="px-4 py-2 rounded-md text-sm font-semibold text-zinc-700 dark:text-zinc-300 bg-zinc-100 dark:bg-zinc-700 hover:bg-zinc-200 dark:hover:bg-zinc-600 transition-colors disabled:opacity-40"
         >
           {t('cancel')}
         </button>
         <button
           type="submit"
           disabled={submitting}
-          className="px-4 py-2 rounded-md text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 dark:bg-indigo-500 dark:hover:bg-indigo-600 transition-colors disabled:opacity-50"
+          className="px-4 py-2 rounded-md text-sm font-semibold text-white bg-indigo-600 hover:bg-indigo-700 transition-colors disabled:opacity-40"
         >
           {submitting ? t('loading') : t('save')}
         </button>

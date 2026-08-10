@@ -31,7 +31,7 @@ export default function AdminPage() {
   }, [])
 
   return (
-    <div className="max-w-5xl mx-auto px-4 py-8 space-y-6">
+    <div className="max-w-6xl mx-auto px-4 py-8 space-y-6">
       {/* Header */}
       <div>
         <h1 className="text-2xl font-bold text-zinc-900 dark:text-white flex items-center gap-2">
@@ -135,11 +135,7 @@ export default function AdminPage() {
                       </span>
                     </td>
                     <td className="px-5 py-3 text-zinc-500 dark:text-zinc-400 text-xs">
-                      {new Date(user.createdAt).toLocaleDateString(undefined, {
-                        year: 'numeric',
-                        month: 'short',
-                        day: 'numeric',
-                      })}
+                      {new Date(user.createdAt).toLocaleDateString('en-CA')}
                     </td>
                   </tr>
                 ))}

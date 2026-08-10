@@ -11,11 +11,12 @@ const redis = isConfigured ? new Redis({
 
 // Sliding window limiters per endpoint type
 const limiters = isConfigured ? {
-  login:    new Ratelimit({ redis: redis!, limiter: Ratelimit.slidingWindow(5,  '60 s'),  prefix: 'rl:login' }),
-  register: new Ratelimit({ redis: redis!, limiter: Ratelimit.slidingWindow(3,  '300 s'), prefix: 'rl:register' }),
-  forgot:   new Ratelimit({ redis: redis!, limiter: Ratelimit.slidingWindow(3,  '300 s'), prefix: 'rl:forgot' }),
-  reset:    new Ratelimit({ redis: redis!, limiter: Ratelimit.slidingWindow(5,  '60 s'),  prefix: 'rl:reset' }),
-  default:  new Ratelimit({ redis: redis!, limiter: Ratelimit.slidingWindow(20, '60 s'),  prefix: 'rl:default' }),
+  login:    new Ratelimit({ redis: redis!, limiter: Ratelimit.slidingWindow(5,  '60 s'),   prefix: 'rl:login' }),
+  register: new Ratelimit({ redis: redis!, limiter: Ratelimit.slidingWindow(3,  '300 s'),  prefix: 'rl:register' }),
+  forgot:   new Ratelimit({ redis: redis!, limiter: Ratelimit.slidingWindow(3,  '300 s'),  prefix: 'rl:forgot' }),
+  reset:    new Ratelimit({ redis: redis!, limiter: Ratelimit.slidingWindow(5,  '60 s'),   prefix: 'rl:reset' }),
+  try:      new Ratelimit({ redis: redis!, limiter: Ratelimit.slidingWindow(5,  '3600 s'), prefix: 'rl:try' }),
+  default:  new Ratelimit({ redis: redis!, limiter: Ratelimit.slidingWindow(20, '60 s'),   prefix: 'rl:default' }),
 } : null
 
 export type LimiterKey = keyof NonNullable<typeof limiters>

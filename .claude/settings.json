@@ -1,0 +1,17 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(psql postgresql://postgres.wlyyqimptertaetnoolz:Zxj%4003279891@aws-1-eu-central-1.pooler.supabase.com:6543/postgres -t -c ' *)",
+      "Bash(awk '/^export default function InsightJob/,0' /Users/zhuangxiaojian/Documents/applyday-online-version/project/components/InsightJob.tsx)",
+      "Bash(cd /Users/zhuangxiaojian/Documents/applyday-online-version/project && grep -r \"t\\('.*'\\)\" --include=\"*.tsx\" app/ components/ | grep -o \"t\\('[^']*'\" | sort -u | sed \"s/t\\('//g\" | sed \"s/'//g\" > /tmp/used_keys.txt && wc -l /tmp/used_keys.txt)",
+      "Read(//tmp/**)",
+      "Read(//Users/zhuongxiaojian/Documents/applyday-online-version/**)",
+      "Read(//private/tmp/**)",
+      "Bash(node -e ' *)",
+      "Bash(node -e \"console.log\\(require\\('./node_modules/next/package.json'\\).version\\)\")",
+      "Bash(node -e \"require\\('jsonrepair'\\)\")",
+      "Bash(npx playwright *)",
+      "Bash(./node_modules/.bin/tsc --noEmit --skipLibCheck)"
+    ]
+  }
+}

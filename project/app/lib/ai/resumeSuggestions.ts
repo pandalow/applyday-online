@@ -1,3 +1,4 @@
+import { jsonrepair } from 'jsonrepair'
 import { z } from 'zod'
 import { createLLM } from '@/app/lib/ai/llm'
 import type { AIProvider } from '@/app/lib/aiConfig'
@@ -21,6 +22,8 @@ function fmt(arr: string[] | null | undefined): string {
 }
 
 const PROMPT_TEMPLATE = `You are an expert resume coach. Compare the candidate's resume against a specific job description and generate targeted improvement suggestions.
+
+LANGUAGE: Write ALL text values ("text", "reason", "original") in {language}. JSON keys must remain in English.
 
 Focus on actionable, specific changes. Each suggestion must fall into one of these types:
 - keyword_gap: A skill/keyword in the JD is missing from the resume (add it)
@@ -82,10 +85,14 @@ export async function generateResumeSuggestions(
   provider: AIProvider = 'openai',
   modelId = 'gpt-4o-mini',
   reasoning = false,
+  language: 'en' | 'zh' = 'en',
 ): Promise<GeneratedSuggestion[]> {
   const model = createLLM(provider, apiKey, modelId, reasoning)
 
+  const langLabel = language === 'zh' ? 'Chinese (Simplified)' : 'English'
+
   const prompt = PROMPT_TEMPLATE
+    .replace('{language}', langLabel)
     .replace('{role}', jd.role ?? 'N/A')
     .replace('{company}', jd.company ?? 'N/A')
     .replace('{required_skills}', fmt(jd.requiredCoreSkills))
@@ -93,11 +100,11 @@ export async function generateResumeSuggestions(
     .replace('{frameworks_tools}', fmt(jd.frameworksTools))
     .replace('{responsibilities}', fmt(jd.responsibilities))
     .replace('{domain_keywords}', fmt(jd.domainKeywords))
-    .replace('{resume_text}', resume.text.slice(0, 6000))
+    .replace('{resume_text}', resume.text.slice(0, 20000))
 
   const response = await model.invoke(prompt)
   const content = typeof response.content === 'string' ? response.content : JSON.stringify(response.content)
   const cleaned = content.replace(/^```(?:json)?\n?/, '').replace(/\n?```$/, '').trim()
-  const parsed = SuggestionSchema.parse(JSON.parse(cleaned))
+  const parsed = SuggestionSchema.parse(JSON.parse(jsonrepair(cleaned)))
   return parsed.suggestions
 }

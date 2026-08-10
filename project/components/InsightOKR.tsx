@@ -1,10 +1,12 @@
 'use client'
 
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect } from 'react'
 import useSWR from 'swr'
 import { useLocale } from '@/locales'
 import { getAIConfig } from '@/app/lib/aiConfig'
 import type { OKRContent } from '@/app/lib/ai/okr'
+import { card, sectionLabel } from '@/app/lib/styles'
+import Button from '@/components/ui/Button'
 
 interface OKRRecord {
   id: string
@@ -49,13 +51,14 @@ function tfKey(tf: string): string {
   return '6'
 }
 
-function OKRCard({ entry, lang, onGenerate }: {
+function OKRCard({ entry, lang, onGenerate, defaultExpanded = false }: {
   entry: AppEntry
   lang: 'en' | 'zh'
   onGenerate: (id: string, lang: 'en' | 'zh') => Promise<void>
+  defaultExpanded?: boolean
 }) {
   const { t } = useLocale()
-  const [expanded, setExpanded] = useState(false)
+  const [expanded, setExpanded] = useState(defaultExpanded)
   const [generating, setGenerating] = useState(false)
   const [err, setErr] = useState<string | null>(null)
 
@@ -74,7 +77,7 @@ function OKRCard({ entry, lang, onGenerate }: {
   }
 
   return (
-    <div className="bg-white dark:bg-zinc-800 rounded-xl border border-zinc-200 dark:border-zinc-700 overflow-hidden shadow-sm">
+    <div className={`${card} overflow-hidden`}>
       {/* Header row */}
       <div
         className="flex items-center justify-between px-5 py-3.5 cursor-pointer hover:bg-zinc-50 dark:hover:bg-zinc-750 transition-colors"
@@ -107,21 +110,6 @@ function OKRCard({ entry, lang, onGenerate }: {
         </div>
 
         <div className="flex items-center gap-3 shrink-0 ml-3">
-          {!okr && !entry.hasJD && (
-            <span className="text-[11px] text-amber-600 dark:text-amber-400 font-medium">
-              {t('okrRequiresJD')}
-            </span>
-          )}
-          {!okr && entry.hasJD && (
-            <button
-              onClick={e => { e.stopPropagation(); handleGenerate() }}
-              disabled={generating}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-700 dark:bg-indigo-500 dark:hover:bg-indigo-600 transition-colors disabled:opacity-50"
-            >
-              {generating && <span className="w-3 h-3 rounded-full border-2 border-white border-t-transparent animate-spin" />}
-              {generating ? t('loading') : t('generateOKR')}
-            </button>
-          )}
           <svg
             className={`w-4 h-4 text-zinc-400 transition-transform ${expanded ? 'rotate-180' : ''}`}
             fill="none" stroke="currentColor" viewBox="0 0 24 24"
@@ -148,16 +136,13 @@ function OKRCard({ entry, lang, onGenerate }: {
           )}
 
           {!okr && entry.hasJD && !generating && (
-            <button onClick={handleGenerate}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-700 dark:bg-indigo-500 dark:hover:bg-indigo-600 transition-colors">
-              {t('generateOKR')}
-            </button>
+            <Button onClick={handleGenerate}>{t('generateOKR')}</Button>
           )}
 
           {okr && (
             <div className="space-y-4">
               <p className="text-[11px] text-zinc-400 dark:text-zinc-500">
-                {t('generatedAt')} {new Date(okr.createdAt).toLocaleString()} · {okr.language === 'zh' ? t('chinese') : t('english')}
+                {t('generatedAt')} {new Date(okr.createdAt).toLocaleDateString('en-CA')} · {okr.language === 'zh' ? t('chinese') : t('english')}
               </p>
 
               {/* 3-column OKR grid */}
@@ -201,10 +186,9 @@ function OKRCard({ entry, lang, onGenerate }: {
               )}
 
               {/* Regenerate */}
-              <button onClick={handleGenerate} disabled={generating}
-                className="text-xs text-zinc-400 dark:text-zinc-500 hover:text-zinc-600 dark:hover:text-zinc-300 underline transition-colors">
+              <Button variant="secondary" onClick={handleGenerate} loading={generating}>
                 {generating ? t('loading') : 'Regenerate'}
-              </button>
+              </Button>
             </div>
           )}
         </div>
@@ -213,18 +197,28 @@ function OKRCard({ entry, lang, onGenerate }: {
   )
 }
 
-export default function InsightOKR() {
+interface Props {
+  applicationId?: string
+}
+
+export default function InsightOKR({ applicationId }: Props = {}) {
   const { t } = useLocale()
   const [lang, setLang] = useState<'en' | 'zh'>('en')
   const [filter, setFilter] = useState<'all' | 'missing' | 'done'>('all')
+  const [aiConfigured, setAiConfigured] = useState(true)
+
+  useEffect(() => {
+    setAiConfigured(!!getAIConfig()?.apiKey)
+  }, [])
 
   const { data, mutate, isLoading } = useSWR<AppEntry[]>(
     '/api/okrs',
-    (url: string) => fetch(url).then(r => r.json()),
+    (url: string) => fetch(url).then(r => r.ok ? r.json() : null),
     { revalidateOnFocus: false },
   )
 
-  const entries = data ?? []
+  const allEntries = data ?? []
+  const entries = applicationId ? allEntries.filter(e => e.applicationId === applicationId) : allEntries
   const filtered = entries.filter(e =>
     filter === 'all' ? true : filter === 'done' ? !!e.okr : !e.okr
   )
@@ -276,8 +270,26 @@ export default function InsightOKR() {
 
   return (
     <div className="space-y-4">
-      {/* Toolbar */}
-      <div className="flex flex-wrap items-center justify-between gap-3">
+      {/* AI key warning */}
+      {!aiConfigured && (
+        <div className="flex items-center justify-between gap-4 rounded-xl border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-900/20 px-4 py-3">
+          <div className="flex items-center gap-2.5">
+            <svg className="w-4 h-4 text-amber-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
+            </svg>
+            <div>
+              <p className="text-sm font-semibold text-amber-700 dark:text-amber-400">{t('aiKeyRequired')}</p>
+              <p className="text-xs text-amber-600 dark:text-amber-500 mt-0.5">{t('aiKeyRequiredDesc')}</p>
+            </div>
+          </div>
+          <a href="/settings" className="shrink-0 text-xs font-semibold text-amber-700 dark:text-amber-400 underline hover:no-underline">
+            {t('goToSettings')}
+          </a>
+        </div>
+      )}
+
+      {/* Toolbar — hidden in single-app workspace mode */}
+      <div className={`flex flex-wrap items-center justify-between gap-3 ${applicationId ? 'hidden' : ''}`}>
         <div className="flex items-center gap-3 flex-wrap">
           {/* Progress */}
           <span className="text-sm text-zinc-500 dark:text-zinc-400">
@@ -314,10 +326,7 @@ export default function InsightOKR() {
         </div>
 
         {entries.some(e => !e.okr && e.hasJD) && (
-          <button onClick={generateAllMissing}
-            className="px-3 py-1.5 rounded-md text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-700 dark:bg-indigo-500 dark:hover:bg-indigo-600 transition-colors">
-            {t('generateAllOKRs')}
-          </button>
+          <Button onClick={generateAllMissing}>{t('generateAllOKRs')}</Button>
         )}
       </div>
 
@@ -329,6 +338,7 @@ export default function InsightOKR() {
             entry={entry}
             lang={lang}
             onGenerate={handleGenerate}
+            defaultExpanded={!!applicationId}
           />
         ))}
         {!filtered.length && (

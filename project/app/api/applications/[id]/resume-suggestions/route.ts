@@ -39,8 +39,9 @@ export async function POST(request: NextRequest, { params }: Params) {
 
   if (!apiKey) return Response.json({ error: 'AI API key required' }, { status: 400 })
 
-  const body = await request.json() as { resumeId: string }
+  const body = await request.json() as { resumeId: string; language?: 'en' | 'zh' }
   if (!body.resumeId) return Response.json({ error: 'resumeId is required' }, { status: 400 })
+  const language = body.language === 'zh' ? 'zh' : 'en'
 
   // Verify application belongs to user
   const app = await db.query.applications.findFirst({
@@ -81,6 +82,7 @@ export async function POST(request: NextRequest, { params }: Params) {
       provider,
       modelId,
       reasoning,
+      language,
     )
 
     const suggestions: SuggestionItem[] = generated.map(s => ({ ...s, status: 'pending' as const }))

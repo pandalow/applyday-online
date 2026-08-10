@@ -136,7 +136,7 @@ function OKRCard({ entry, onGenerate }: {
             <div className="space-y-4">
               <div className="flex items-center justify-between">
                 <p className="text-[11px] text-zinc-400 dark:text-zinc-500">
-                  {t('generatedAt')} {new Date(okr.createdAt).toLocaleString()} · {okr.language === 'zh' ? t('chinese') : t('english')}
+                  {t('generatedAt')} {new Date(okr.createdAt).toLocaleDateString('en-CA')} · {okr.language === 'zh' ? t('chinese') : t('english')}
                 </p>
               </div>
 
@@ -198,7 +198,7 @@ export default function ReportOKR({ reportId }: { reportId: string }) {
 
   const { data, mutate, isLoading } = useSWR<AppOKREntry[]>(
     `/api/reports/${reportId}/okrs`,
-    (url: string) => fetch(url).then(r => r.json()),
+    (url: string) => fetch(url).then(r => r.ok ? r.json() : null),
     { revalidateOnFocus: false },
   )
 

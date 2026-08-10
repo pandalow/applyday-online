@@ -136,7 +136,7 @@ export default function ReportDetail() {
                   )}
                 </div>
                 <p className="text-[10px] text-zinc-400 dark:text-zinc-500">
-                  {new Date(report.createdAt).toLocaleDateString()}
+                  {new Date(report.createdAt).toLocaleDateString('en-CA')}
                 </p>
                 <p className="text-[10px] text-zinc-400 dark:text-zinc-500">
                   {report.status === 'pending' ? 'Generating…' : `${report.results?.length ?? 0} analyses`}
@@ -168,7 +168,7 @@ export default function ReportDetail() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-xs text-zinc-500 dark:text-zinc-400">
-                  {new Date(selectedReport.createdAt).toLocaleString()}
+                  {new Date(selectedReport.createdAt).toLocaleDateString('en-CA')}
                 </p>
               </div>
             </div>
@@ -288,7 +288,7 @@ export default function ReportDetail() {
                       className="bg-white dark:bg-zinc-800 rounded-xl border border-zinc-200 dark:border-zinc-700 p-5 shadow-sm"
                     >
                       <p className="text-xs text-zinc-400 dark:text-zinc-500 mb-3">
-                        {new Date(summary.createdAt).toLocaleString()}
+                        {new Date(summary.createdAt).toLocaleDateString('en-CA')}
                       </p>
                       <ReportAnalysis content={summary.content} />
                     </div>

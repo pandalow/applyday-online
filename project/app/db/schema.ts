@@ -165,6 +165,147 @@ export const resumeSuggestionsRelations = relations(resumeSuggestions, ({ one })
   user: one(users, { fields: [resumeSuggestions.userId], references: [users.id] }),
 }))
 
+// Job Insights (AI-generated single JD analysis)
+export type InsightVerdict = 'strong_fit' | 'good_fit' | 'stretch' | 'low_fit'
+export type InsightRecommendation = 'strong_apply' | 'apply_with_tailoring' | 'stretch' | 'low_fit'
+
+export interface JobInsightContent {
+  roleProfile: {
+    type: string
+    seniority: string
+    orientation: string
+    companyContext: string
+    summary: string
+  }
+  matchAnalysis: {
+    verdict: InsightVerdict
+    headline: string
+    strongSignals: string[]
+    mainRisks: string[]
+  }
+  requirements: {
+    mustHave: string[]
+    niceToHave: string[]
+    hiddenExpectations: string[]
+    noise: string[]
+  }
+  strategy: {
+    bestEmphasis: string[]
+    deEmphasize: string[]
+    bestStory: string
+  }
+  applyDecision: {
+    recommendation: InsightRecommendation
+    rationale: string
+    actionItems: string[]
+  }
+  interviewPrep: {
+    whyCompany: string[]
+    whyRole: string[]
+    likelyTechnical: string[]
+    behavioralThemes: string[]
+    objectionsToHandle: { objection: string; response: string }[]
+  }
+  applicationMaterials: {
+    resumeHeadline: string
+    shortStatement: string
+    recruiterMessage: string
+  }
+  resumeEdits?: {
+    remove: string[]
+    add: string[]
+  }
+}
+
+export const jobInsights = pgTable('job_insights', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  applicationId: uuid('application_id').notNull().references(() => applications.id, { onDelete: 'cascade' }),
+  userId: uuid('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  resumeId: uuid('resume_id').references(() => resumeTexts.id, { onDelete: 'set null' }),
+  content: jsonb('content').$type<JobInsightContent>().notNull(),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+}, (t) => ({
+  appIdx: index('job_insights_app_idx').on(t.applicationId),
+  userIdx: index('job_insights_user_idx').on(t.userId),
+}))
+
+export const jobInsightsRelations = relations(jobInsights, ({ one }) => ({
+  application: one(applications, { fields: [jobInsights.applicationId], references: [applications.id] }),
+  user: one(users, { fields: [jobInsights.userId], references: [users.id] }),
+  resume: one(resumeTexts, { fields: [jobInsights.resumeId], references: [resumeTexts.id] }),
+}))
+
+// Cover Letters (AI-generated per application + resume pair)
+export type CoverLetterTone = 'professional' | 'conversational' | 'enthusiastic'
+
+export const coverLetters = pgTable('cover_letters', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  applicationId: uuid('application_id').notNull().references(() => applications.id, { onDelete: 'cascade' }),
+  resumeId: uuid('resume_id').notNull().references(() => resumeTexts.id, { onDelete: 'cascade' }),
+  userId: uuid('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  tone: varchar('tone', { length: 50 }).notNull().default('professional'),
+  content: text('content').notNull(),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+}, (t) => ({
+  appIdx: index('cover_letters_app_idx').on(t.applicationId),
+  userIdx: index('cover_letters_user_idx').on(t.userId),
+}))
+
+export const coverLettersRelations = relations(coverLetters, ({ one }) => ({
+  application: one(applications, { fields: [coverLetters.applicationId], references: [applications.id] }),
+  resume: one(resumeTexts, { fields: [coverLetters.resumeId], references: [resumeTexts.id] }),
+  user: one(users, { fields: [coverLetters.userId], references: [users.id] }),
+}))
+
+// User Profiles (personal info & professional bio)
+export const userProfiles = pgTable('user_profiles', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  userId: uuid('user_id').notNull().unique().references(() => users.id, { onDelete: 'cascade' }),
+  headline: varchar('headline', { length: 255 }),
+  bio: text('bio'),
+  skills: text('skills'),
+  location: varchar('location', { length: 255 }),
+  phone: varchar('phone', { length: 50 }),
+  linkedinUrl: varchar('linkedin_url', { length: 500 }),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+})
+
+export const userProfilesRelations = relations(userProfiles, ({ one }) => ({
+  user: one(users, { fields: [userProfiles.userId], references: [users.id] }),
+}))
+
+// Generation Jobs (async outbox for Generate All)
+export const generationJobStatusEnum = pgEnum('generation_job_status', ['pending', 'running', 'done', 'error'])
+export const generationJobTypeEnum = pgEnum('generation_job_type', ['insight', 'resume', 'cover', 'okr'])
+
+export const generationJobs = pgTable('generation_jobs', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  applicationId: uuid('application_id').notNull().references(() => applications.id, { onDelete: 'cascade' }),
+  userId: uuid('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  type: generationJobTypeEnum('type').notNull(),
+  resumeId: uuid('resume_id').references(() => resumeTexts.id, { onDelete: 'set null' }),
+  status: generationJobStatusEnum('status').default('pending').notNull(),
+  error: text('error'),
+  apiKey: text('api_key').notNull(),
+  provider: varchar('provider', { length: 50 }).notNull(),
+  model: varchar('model', { length: 100 }).notNull(),
+  reasoning: boolean('reasoning').default(false).notNull(),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  startedAt: timestamp('started_at'),
+  completedAt: timestamp('completed_at'),
+}, (t) => ({
+  appIdx: index('gen_jobs_app_idx').on(t.applicationId),
+  userIdx: index('gen_jobs_user_idx').on(t.userId),
+  statusIdx: index('gen_jobs_status_idx').on(t.status),
+}))
+
+export const generationJobsRelations = relations(generationJobs, ({ one }) => ({
+  application: one(applications, { fields: [generationJobs.applicationId], references: [applications.id] }),
+  user: one(users, { fields: [generationJobs.userId], references: [users.id] }),
+  resume: one(resumeTexts, { fields: [generationJobs.resumeId], references: [resumeTexts.id] }),
+}))
+
 // Analysis Results
 export const analysisResults = pgTable('analysis_results', {
   id: uuid('id').primaryKey().defaultRandom(),

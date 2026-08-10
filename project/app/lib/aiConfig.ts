@@ -26,25 +26,26 @@ interface ModelOption {
 
 export const PROVIDER_MODELS: Record<AIProvider, ModelOption[]> = {
   openai: [
+    { id: 'gpt-4.1-mini', label: 'GPT-4.1 Mini' },
+    { id: 'gpt-4.1', label: 'GPT-4.1' },
     { id: 'gpt-4o-mini', label: 'GPT-4o Mini' },
     { id: 'gpt-4o', label: 'GPT-4o' },
-    { id: 'o3-mini', label: 'o3-mini', supportsReasoning: true },
-    { id: 'o1', label: 'o1', supportsReasoning: true },
+    { id: 'o4-mini', label: 'o4-mini', supportsReasoning: true },
+    { id: 'o3', label: 'o3', supportsReasoning: true },
   ],
   claude: [
-    { id: 'claude-3-5-haiku-20241022', label: 'Claude 3.5 Haiku' },
-    { id: 'claude-3-5-sonnet-20241022', label: 'Claude 3.5 Sonnet' },
-    { id: 'claude-3-7-sonnet-20250219', label: 'Claude 3.7 Sonnet', supportsReasoning: true },
+    { id: 'claude-haiku-4-5-20251001', label: 'Claude Haiku 4.5' },
+    { id: 'claude-sonnet-4-6', label: 'Claude Sonnet 4.6', supportsReasoning: true },
+    { id: 'claude-opus-4-7', label: 'Claude Opus 4.7', supportsReasoning: true },
   ],
   deepseek: [
-    { id: 'deepseek-chat', label: 'DeepSeek Chat' },
-    { id: 'deepseek-reasoner', label: 'DeepSeek Reasoner', supportsReasoning: true },
+    { id: 'deepseek-v4-flash', label: 'DeepSeek V4 Flash' },
+    { id: 'deepseek-v4-pro', label: 'DeepSeek V4 Pro', supportsReasoning: true },
   ],
   gemini: [
-    { id: 'gemini-2.0-flash-lite', label: 'Gemini 2.0 Flash Lite' },
-    { id: 'gemini-2.0-flash', label: 'Gemini 2.0 Flash' },
-    { id: 'gemini-2.5-flash-preview-04-17', label: 'Gemini 2.5 Flash', supportsReasoning: true },
-    { id: 'gemini-2.5-pro-preview-05-06', label: 'Gemini 2.5 Pro', supportsReasoning: true },
+    { id: 'gemini-2.5-flash-lite', label: 'Gemini 2.5 Flash Lite' },
+    { id: 'gemini-2.5-flash', label: 'Gemini 2.5 Flash', supportsReasoning: true },
+    { id: 'gemini-2.5-pro', label: 'Gemini 2.5 Pro', supportsReasoning: true },
   ],
 }
 

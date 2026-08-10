@@ -271,9 +271,19 @@ const ApplicationTable = forwardRef<ApplicationTableHandle, Props>(
 
                   <td className="px-1 py-1.5">
                     <div className="flex items-center gap-0.5">
+                      <a
+                        href={`/workspace?app=${app.id}&tab=jd`}
+                        className="p-1.5 rounded-md text-zinc-400 hover:text-indigo-500 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 transition-colors"
+                        title="Open Workspace"
+                        onClick={e => e.stopPropagation()}
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                        </svg>
+                      </a>
                       <button
                         onClick={() => setExpandedId(id => id === app.id ? null : app.id)}
-                        className="p-1.5 rounded text-zinc-400 hover:text-indigo-500 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 transition-all"
+                        className="p-1.5 rounded-md text-zinc-400 hover:text-indigo-500 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 transition-colors"
                         aria-label="Toggle detail"
                       >
                         <svg
@@ -285,7 +295,7 @@ const ApplicationTable = forwardRef<ApplicationTableHandle, Props>(
                       </button>
                       <button
                         onClick={() => { if (window.confirm(t('deleteConfirm'))) onDelete(app.id) }}
-                        className="opacity-0 group-hover:opacity-100 p-1.5 rounded text-zinc-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-all"
+                        className="opacity-0 group-hover:opacity-100 p-1.5 rounded-md text-zinc-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
                         aria-label={t('delete')}
                       >
                         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -369,13 +379,13 @@ const ApplicationTable = forwardRef<ApplicationTableHandle, Props>(
                         <button
                           onClick={commitNewRow}
                           disabled={!newRow.company.trim() || !newRow.jobTitle.trim() || isSaving('new')}
-                          className="px-3 py-1 rounded text-xs font-semibold bg-indigo-600 text-white hover:bg-indigo-700 disabled:opacity-40 transition-colors"
+                          className="px-3 py-1.5 rounded-md text-xs font-semibold bg-indigo-600 text-white hover:bg-indigo-700 disabled:opacity-40 transition-colors"
                         >
                           {isSaving('new') ? '…' : 'Add'}
                         </button>
                         <button
                           onClick={() => setNewRow(null)}
-                          className="px-2 py-1 rounded text-xs text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300"
+                          className="px-3 py-1.5 rounded-md text-xs font-semibold text-zinc-500 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-700 transition-colors"
                         >
                           Cancel
                         </button>
@@ -417,7 +427,7 @@ const ApplicationTable = forwardRef<ApplicationTableHandle, Props>(
             onClick={() => setNotesModal(null)}
           >
             <div
-              className="w-full max-w-md bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-700 shadow-2xl p-5 space-y-3"
+              className="w-full max-w-md bg-white dark:bg-zinc-800 rounded-xl border border-zinc-200 dark:border-zinc-700 shadow-2xl p-5 space-y-3"
               onClick={e => e.stopPropagation()}
             >
               <div className="flex items-center justify-between">
@@ -437,13 +447,13 @@ const ApplicationTable = forwardRef<ApplicationTableHandle, Props>(
                 className="w-full rounded-lg border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 px-3 py-2 text-sm text-zinc-900 dark:text-white placeholder-zinc-400 resize-y focus:outline-none focus:ring-2 focus:ring-indigo-500"
               />
               <div className="flex justify-end gap-2 pt-1">
-                <button onClick={() => setNotesModal(null)} className="px-3 py-1.5 rounded-md text-sm text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors">
+                <button onClick={() => setNotesModal(null)} className="px-3 py-1.5 rounded-md text-sm font-semibold text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-700 transition-colors">
                   Cancel
                 </button>
                 <button
                   onClick={saveNotes}
                   disabled={isSaving(notesModal.id)}
-                  className="px-3 py-1.5 rounded-md text-sm font-semibold bg-indigo-600 text-white hover:bg-indigo-700 disabled:opacity-50 transition-colors"
+                  className="px-3 py-1.5 rounded-md text-sm font-semibold bg-indigo-600 text-white hover:bg-indigo-700 disabled:opacity-40 transition-colors"
                 >
                   {isSaving(notesModal.id) ? '…' : 'Save'}
                 </button>

@@ -24,6 +24,7 @@ export async function GET() {
   ])
 
   const jdByApp = new Map(jdTexts.map(t => [t.applicationId, t.jobDescription]))
+  const hasRawJD = new Set(jdTexts.map(t => t.applicationId).filter(Boolean) as string[])
   const okrByApp = new Map<string, typeof okrs[number]>()
   for (const okr of okrs) {
     if (!okrByApp.has(okr.applicationId)) okrByApp.set(okr.applicationId, okr)
@@ -38,7 +39,7 @@ export async function GET() {
       status: app.status,
       role: jd?.role ?? null,
       level: jd?.level ?? null,
-      hasJD: !!jd,
+      hasJD: hasRawJD.has(app.id),
       okr: okrByApp.get(app.id) ?? null,
     }
   })

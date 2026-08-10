@@ -234,7 +234,7 @@ export default function ReportGenerator({ onSuccess }: ReportGeneratorProps) {
       <button
         type="submit"
         disabled={submitting || !selectedIds.size}
-        className="w-full py-2.5 rounded-md text-sm font-semibold text-white bg-indigo-600 hover:bg-indigo-700 dark:bg-indigo-500 dark:hover:bg-indigo-600 transition-colors disabled:opacity-50"
+        className="w-full py-2 rounded-md text-sm font-semibold text-white bg-indigo-600 hover:bg-indigo-700 transition-colors disabled:opacity-40"
       >
         {submitting ? t('loading') : t('generateReport')}
       </button>

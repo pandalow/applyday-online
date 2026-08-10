@@ -1,20 +1,18 @@
 'use client'
 
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect } from 'react'
 import useSWR from 'swr'
 import ResumeManager from '@/components/ResumeManager'
 import { getAIConfig } from '@/app/lib/aiConfig'
+import { useLocale } from '@/locales'
 import type { SuggestionItem, SuggestionType } from '@/app/db/schema'
+import { card, cardHeader, sectionLabel } from '@/app/lib/styles'
+import Button from '@/components/ui/Button'
 
 const fetcher = (url: string) => fetch(url).then(r => r.ok ? r.json() : null)
 
-interface AppEntry {
+interface Props {
   applicationId: string
-  company: string
-  jobTitle: string
-  hasJD: boolean
-  role: string | null
-  level: string | null
 }
 
 interface SuggestionsRow {
@@ -31,19 +29,21 @@ const TYPE_META: Record<SuggestionType, { label: string; color: string }> = {
   add_section: { label: 'Add Section',  color: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400' },
 }
 
-export default function InsightResume() {
+export default function InsightResume({ applicationId }: Props) {
+  const { t, lang } = useLocale()
   const [selectedResumeId, setSelectedResumeId] = useState('')
-  const [selectedAppId, setSelectedAppId] = useState('')
   const [generating, setGenerating] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [copied, setCopied] = useState<string | null>(null)
+  const [aiConfigured, setAiConfigured] = useState(true)
 
-  const { data: allApps = [] } = useSWR<AppEntry[]>('/api/okrs', fetcher)
-  const appsWithJD = allApps.filter(a => a.hasJD)
+  useEffect(() => {
+    setAiConfigured(!!getAIConfig()?.apiKey)
+  }, [])
 
   const { data: row, mutate } = useSWR<SuggestionsRow | null>(
-    selectedAppId && selectedResumeId
-      ? `/api/applications/${selectedAppId}/resume-suggestions?resumeId=${selectedResumeId}`
+    selectedResumeId
+      ? `/api/applications/${applicationId}/resume-suggestions?resumeId=${selectedResumeId}`
       : null,
     fetcher,
   )
@@ -54,13 +54,13 @@ export default function InsightResume() {
   const dismissed = suggestions.filter(s => s.status === 'dismissed')
 
   const generate = async () => {
-    if (!selectedResumeId || !selectedAppId) return
+    if (!selectedResumeId) return
     const cfg = getAIConfig()
     if (!cfg?.apiKey) { setError('AI API key not configured. Go to Settings.'); return }
     setGenerating(true)
     setError(null)
     try {
-      const res = await fetch(`/api/applications/${selectedAppId}/resume-suggestions`, {
+      const res = await fetch(`/api/applications/${applicationId}/resume-suggestions`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -69,7 +69,7 @@ export default function InsightResume() {
           'X-AI-Model': cfg.model,
           'X-AI-Reasoning': String(cfg.reasoning),
         },
-        body: JSON.stringify({ resumeId: selectedResumeId }),
+        body: JSON.stringify({ resumeId: selectedResumeId, language: lang }),
       })
       if (!res.ok) {
         const body = await res.json().catch(() => ({}))
@@ -84,14 +84,14 @@ export default function InsightResume() {
   }
 
   const updateStatus = useCallback(async (suggestionId: string, status: SuggestionItem['status']) => {
-    if (!selectedAppId || !selectedResumeId || !row) return
-    const res = await fetch(`/api/applications/${selectedAppId}/resume-suggestions`, {
+    if (!selectedResumeId || !row) return
+    const res = await fetch(`/api/applications/${applicationId}/resume-suggestions`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ resumeId: selectedResumeId, suggestionId, status }),
     })
     if (res.ok) mutate()
-  }, [selectedAppId, selectedResumeId, row, mutate])
+  }, [applicationId, selectedResumeId, row, mutate])
 
   const accept = useCallback(async (s: SuggestionItem) => {
     await navigator.clipboard.writeText(s.text)
@@ -100,73 +100,77 @@ export default function InsightResume() {
     updateStatus(s.id, 'accepted')
   }, [updateStatus])
 
-  const selectedApp = appsWithJD.find(a => a.applicationId === selectedAppId)
-
-  const canGenerate = !!selectedResumeId && !!selectedAppId
+  const step1Done = !!selectedResumeId
+  const canGenerate = step1Done
 
   return (
     <div className="space-y-6">
-      {/* Step 1 + 2: two-column picker */}
-      <div className="grid lg:grid-cols-2 gap-6">
-        {/* Resume */}
-        <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 p-5 shadow-sm">
-          <h3 className="text-sm font-semibold text-zinc-700 dark:text-zinc-300 uppercase tracking-wider mb-4">
-            Your Resume
-          </h3>
-          <ResumeManager
-            onSelectResume={setSelectedResumeId}
-            selectedResumeId={selectedResumeId}
-          />
-        </div>
-
-        {/* JD / Application */}
-        <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 p-5 shadow-sm space-y-4">
-          <h3 className="text-sm font-semibold text-zinc-700 dark:text-zinc-300 uppercase tracking-wider">
-            Target Job Description
-          </h3>
-
-          {appsWithJD.length === 0 ? (
-            <p className="text-sm text-zinc-500 dark:text-zinc-400">
-              No applications with a job description found. Add a JD to an application first.
-            </p>
-          ) : (
-            <select
-              value={selectedAppId}
-              onChange={e => { setSelectedAppId(e.target.value); mutate(null) }}
-              className="w-full rounded-lg border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 px-3 py-2.5 text-sm text-zinc-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
-            >
-              <option value="">Select application…</option>
-              {appsWithJD.map(a => (
-                <option key={a.applicationId} value={a.applicationId}>
-                  {a.company} — {a.jobTitle}{a.level ? ` (${a.level})` : ''}
-                </option>
-              ))}
-            </select>
-          )}
-
-          {selectedApp && (
-            <div className="rounded-lg bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 px-3 py-2.5 space-y-1">
-              <p className="text-sm font-medium text-zinc-900 dark:text-white">{selectedApp.company}</p>
-              <p className="text-xs text-zinc-500 dark:text-zinc-400">
-                {selectedApp.jobTitle}{selectedApp.role && selectedApp.role !== selectedApp.jobTitle ? ` · ${selectedApp.role}` : ''}
-                {selectedApp.level ? ` · ${selectedApp.level}` : ''}
-              </p>
+      {/* AI key warning */}
+      {!aiConfigured && (
+        <div className="flex items-center justify-between gap-4 rounded-xl border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-900/20 px-4 py-3">
+          <div className="flex items-center gap-2.5">
+            <svg className="w-4 h-4 text-amber-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
+            </svg>
+            <div>
+              <p className="text-sm font-semibold text-amber-700 dark:text-amber-400">{t('aiKeyRequired')}</p>
+              <p className="text-xs text-amber-600 dark:text-amber-500 mt-0.5">{t('aiKeyRequiredDesc')}</p>
             </div>
-          )}
-
-          <button
-            onClick={generate}
-            disabled={!canGenerate || generating}
-            className="w-full rounded-lg bg-indigo-600 hover:bg-indigo-700 disabled:opacity-40 text-white font-semibold py-2.5 text-sm transition-colors flex items-center justify-center gap-2"
-          >
-            {generating && <span className="w-4 h-4 rounded-full border-2 border-white/30 border-t-white animate-spin" />}
-            {generating ? 'Analysing…' : row ? 'Re-analyse' : 'Analyse Resume'}
-          </button>
-
-          {!selectedResumeId && (
-            <p className="text-xs text-zinc-400 dark:text-zinc-500 text-center">Select a resume on the left to get started</p>
-          )}
+          </div>
+          <a href="/settings" className="shrink-0 text-xs font-semibold text-amber-700 dark:text-amber-400 underline hover:no-underline">
+            {t('goToSettings')}
+          </a>
         </div>
+      )}
+
+      {/* Steps indicator */}
+      <div className="flex items-center gap-2">
+        {[
+          { num: 1, label: t('stepUploadResume'), done: step1Done },
+          { num: 2, label: t('stepGetSuggestions'), done: suggestions.length > 0 },
+        ].map((step, i) => (
+          <div key={step.num} className="flex items-center gap-2">
+            {i > 0 && <div className="w-8 h-px bg-zinc-200 dark:bg-zinc-700 shrink-0" />}
+            <div className="flex items-center gap-1.5">
+              <div className={`w-5 h-5 rounded-full flex items-center justify-center text-[11px] font-bold shrink-0 transition-colors ${
+                step.done
+                  ? 'bg-indigo-600 text-white'
+                  : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-400 dark:text-zinc-500 border border-zinc-200 dark:border-zinc-700'
+              }`}>
+                {step.done ? (
+                  <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                  </svg>
+                ) : step.num}
+              </div>
+              <span className={`text-xs font-medium ${
+                step.done ? 'text-indigo-600 dark:text-indigo-400' : 'text-zinc-500 dark:text-zinc-400'
+              }`}>{step.label}</span>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Resume picker + generate */}
+      <div className={`${card} p-4 space-y-4`}>
+        <h3 className={`${sectionLabel} flex items-center gap-2`}>
+          <span className="w-5 h-5 rounded-full bg-indigo-100 dark:bg-indigo-900/40 text-indigo-600 dark:text-indigo-400 text-[10px] font-bold flex items-center justify-center shrink-0">1</span>
+          {t('stepUploadResume')}
+        </h3>
+        <ResumeManager
+          onSelectResume={setSelectedResumeId}
+          selectedResumeId={selectedResumeId}
+        />
+
+        <Button
+          onClick={generate}
+          disabled={!canGenerate}
+          loading={generating}
+          className="w-full"
+        >
+          <span className="w-5 h-5 rounded-full bg-white/20 text-white text-[10px] font-bold flex items-center justify-center shrink-0">2</span>
+          {generating ? 'Analysing…' : row ? 'Re-analyse' : t('stepGetSuggestions')}
+        </Button>
       </div>
 
       {error && (
@@ -178,7 +182,6 @@ export default function InsightResume() {
       {/* Suggestions */}
       {suggestions.length > 0 && (
         <div className="space-y-4">
-          {/* Progress */}
           <div className="flex items-center gap-3 text-xs text-zinc-500 dark:text-zinc-400">
             <span className="font-semibold text-zinc-700 dark:text-zinc-300 text-sm">
               {suggestions.length} suggestions
@@ -191,11 +194,10 @@ export default function InsightResume() {
             <span className="text-indigo-600 dark:text-indigo-400">{pending.length} pending</span>
           </div>
 
-          {/* Pending cards */}
           {pending.map(s => {
             const meta = TYPE_META[s.type]
             return (
-              <div key={s.id} className="bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-800 shadow-sm overflow-hidden">
+              <div key={s.id} className={`${card} overflow-hidden`}>
                 <div className="px-5 py-4 space-y-3">
                   <div className="flex items-center gap-2 flex-wrap">
                     <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${meta.color}`}>
@@ -219,11 +221,8 @@ export default function InsightResume() {
                   <p className="text-xs text-zinc-500 dark:text-zinc-400 italic">{s.reason}</p>
                 </div>
 
-                <div className="border-t border-zinc-100 dark:border-zinc-800 px-5 py-3 flex gap-2 bg-zinc-50/50 dark:bg-zinc-800/30">
-                  <button
-                    onClick={() => accept(s)}
-                    className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-emerald-600 hover:bg-emerald-700 text-white transition-colors flex items-center gap-1.5"
-                  >
+                <div className={`border-t border-zinc-100 dark:border-zinc-700 px-4 py-3 flex gap-2 bg-zinc-50/50 dark:bg-zinc-800/30`}>
+                  <Button variant="success" onClick={() => accept(s)}>
                     {copied === s.id ? (
                       <>
                         <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -232,19 +231,15 @@ export default function InsightResume() {
                         Copied!
                       </>
                     ) : 'Accept & Copy'}
-                  </button>
-                  <button
-                    onClick={() => updateStatus(s.id, 'dismissed')}
-                    className="px-3 py-1.5 rounded-lg text-xs font-medium text-zinc-500 dark:text-zinc-400 hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-colors"
-                  >
+                  </Button>
+                  <Button variant="secondary" onClick={() => updateStatus(s.id, 'dismissed')}>
                     Dismiss
-                  </button>
+                  </Button>
                 </div>
               </div>
             )
           })}
 
-          {/* Accepted (collapsed) */}
           {accepted.length > 0 && (
             <details className="group">
               <summary className="cursor-pointer list-none flex items-center gap-1.5 text-xs font-medium text-emerald-600 dark:text-emerald-400 hover:underline">
@@ -275,7 +270,6 @@ export default function InsightResume() {
             </details>
           )}
 
-          {/* All done state */}
           {pending.length === 0 && dismissed.length === 0 && accepted.length === suggestions.length && (
             <div className="text-center py-6 text-sm text-emerald-600 dark:text-emerald-400 font-medium">
               All suggestions accepted. Good luck with your application!
@@ -284,7 +278,6 @@ export default function InsightResume() {
         </div>
       )}
 
-      {/* Empty state after selection */}
       {canGenerate && !generating && suggestions.length === 0 && (
         <div className="text-center py-10 text-sm text-zinc-500 dark:text-zinc-400">
           Click Analyse Resume to generate tailored suggestions.
