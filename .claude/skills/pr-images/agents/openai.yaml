@@ -1,0 +1,7 @@
+interface:
+  display_name: "PR Images"
+  short_description: "PR body plus a screenshot or diagram attached to the description"
+  default_prompt: "Use $pr-images to write this PR's body, make an image of the change, and attach it to the description."
+
+policy:
+  allow_implicit_invocation: true
