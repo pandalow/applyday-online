@@ -2,7 +2,7 @@ import { type NextRequest } from 'next/server'
 import { db } from '@/app/lib/drizzle'
 import {
   analysisReports, applications, applicationOkrs,
-  jobDescriptionTexts, jobDescriptions,
+  jobDescriptionTexts,
 } from '@/app/db/schema'
 import { verifySession } from '@/app/lib/dal'
 import { eq, and, inArray, desc } from 'drizzle-orm'

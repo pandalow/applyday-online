@@ -1,15 +1,8 @@
 import { type NextRequest } from 'next/server'
 import { db } from '@/app/lib/drizzle'
-import { applications } from '@/app/db/schema'
+import { applications, isApplicationStatus } from '@/app/db/schema'
 import { verifySession } from '@/app/lib/dal'
 import { eq, and, desc, asc, ilike, or } from 'drizzle-orm'
-
-const VALID_STATUSES = ['prepared', 'applied', 'interviewed', 'offered', 'rejected'] as const
-type ApplicationStatus = typeof VALID_STATUSES[number]
-
-function isValidStatus(s: string): s is ApplicationStatus {
-  return (VALID_STATUSES as readonly string[]).includes(s)
-}
 
 function buildOrderBy(sort: string) {
   const isDesc = sort.startsWith('-')
@@ -33,7 +26,7 @@ export async function GET(request: NextRequest) {
   const sort = searchParams.get('sort') ?? '-createdAt'
 
   const statusFilter =
-    statusParam && isValidStatus(statusParam) ? statusParam : undefined
+    statusParam && isApplicationStatus(statusParam) ? statusParam : undefined
 
   const rows = await db
     .select()
@@ -76,7 +69,7 @@ export async function POST(request: NextRequest) {
         company,
         jobTitle,
         applicationDate: applicationDate ? new Date(applicationDate) : undefined,
-        status: isValidStatus(status) ? status : 'prepared',
+        status: isApplicationStatus(status) ? status : 'prepared',
         stageNotes: stageNotes ?? null,
         channel: channel ?? null,
       })

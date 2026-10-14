@@ -3,13 +3,13 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import useSWR from 'swr'
 import { getAIConfig } from '@/app/lib/aiConfig'
+import { fetchJsonOrNull } from '@/app/lib/fetcher'
+import { useAiConfigured } from '@/app/lib/useAiConfigured'
 import { useLocale } from '@/locales'
 import type { JobInsightContent } from '@/app/db/schema'
 import { card, cardHeader, sectionLabel, inputBase } from '@/app/lib/styles'
 import Button from '@/components/ui/Button'
 import JobInsightView, { exportToMarkdown } from '@/components/JobInsightView'
-
-const fetcher = (url: string) => fetch(url).then(r => r.ok ? r.json() : null)
 
 interface Props {
   applicationId: string
@@ -70,19 +70,17 @@ export default function InsightJob({ applicationId, company, jobTitle }: Props) 
   const [selectedResumeId, setSelectedResumeId] = useState('')
   const [generating, setGenerating] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [aiConfigured, setAiConfigured] = useState(true)
+  const aiConfigured = useAiConfigured()
 
   // "Also generate" state
   const [generateAll, setGenerateAll] = useState(false)
   const [bgJobs, setBgJobs] = useState<BgJob[]>([])
   const pollRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
-  useEffect(() => { setAiConfigured(!!getAIConfig()?.apiKey) }, [])
-
-  const { data: resumes = [] } = useSWR<ResumeEntry[]>('/api/resumes', fetcher)
+  const { data: resumes = [] } = useSWR<ResumeEntry[]>('/api/resumes', fetchJsonOrNull)
   const { data: row, mutate } = useSWR<InsightRow | null>(
     `/api/applications/${applicationId}/job-insight`,
-    fetcher,
+    fetchJsonOrNull,
   )
   const content = row?.content ?? null
 

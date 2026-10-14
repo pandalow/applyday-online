@@ -2,28 +2,22 @@ import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 import { decrypt } from '@/app/lib/session'
 
-const protectedRoutes = ['/app', '/report', '/extract', '/admin', '/applications', '/market', '/workspace', '/profile', '/settings']
-const adminRoutes = ['/admin']
-const publicRoutes = ['/login', '/register', '/']
+const protectedRoutes = ['/app', '/admin', '/applications', '/market', '/workspace', '/profile', '/settings']
+const authPages = ['/login', '/register']
 
 export async function proxy(request: NextRequest) {
   const path = request.nextUrl.pathname
-  const isProtectedRoute = protectedRoutes.some(r => path.startsWith(r))
-  const isAdminRoute = adminRoutes.some(r => path.startsWith(r))
-  const isPublicRoute = publicRoutes.includes(path)
+  const session = await decrypt(request.cookies.get('session')?.value)
 
-  const cookie = request.cookies.get('session')?.value
-  const session = await decrypt(cookie)
-
-  if (isProtectedRoute && !session?.userId) {
+  if (protectedRoutes.some(r => path.startsWith(r)) && !session?.userId) {
     return NextResponse.redirect(new URL('/login', request.nextUrl))
   }
 
-  if (isAdminRoute && session?.role !== 'admin') {
+  if (path.startsWith('/admin') && session?.role !== 'admin') {
     return NextResponse.redirect(new URL('/app', request.nextUrl))
   }
 
-  if (isPublicRoute && session?.userId && path !== '/') {
+  if (authPages.includes(path) && session?.userId) {
     return NextResponse.redirect(new URL('/app', request.nextUrl))
   }
 

@@ -9,6 +9,9 @@ export const userRoleEnum = pgEnum('user_role', ['admin', 'user'])
 export const applicationStatusEnum = pgEnum('application_status', [
   'prepared', 'applied', 'interviewed', 'offered', 'rejected'
 ])
+export type ApplicationStatus = (typeof applicationStatusEnum.enumValues)[number]
+export const isApplicationStatus = (s: string): s is ApplicationStatus =>
+  (applicationStatusEnum.enumValues as readonly string[]).includes(s)
 export const remoteworkEnum = pgEnum('remote_work', ['on-site', 'hybrid', 'remote'])
 export const employmentTypeEnum = pgEnum('employment_type', [
   'full_time', 'contract', 'internship', 'part_time'

@@ -1,7 +1,7 @@
 import { type NextRequest } from 'next/server'
 import { db } from '@/app/lib/drizzle'
 import {
-  applications, applicationOkrs, jobDescriptionTexts, jobDescriptions,
+  applications, applicationOkrs, jobDescriptionTexts,
 } from '@/app/db/schema'
 import { verifySession } from '@/app/lib/dal'
 import { generateOKR } from '@/app/lib/ai/okr'

@@ -1,15 +1,15 @@
 'use client'
 
-import { useState, useCallback, useEffect } from 'react'
+import { useState, useCallback } from 'react'
 import useSWR from 'swr'
 import ResumeManager from '@/components/ResumeManager'
 import { getAIConfig } from '@/app/lib/aiConfig'
+import { fetchJsonOrNull } from '@/app/lib/fetcher'
+import { useAiConfigured } from '@/app/lib/useAiConfigured'
 import { useLocale } from '@/locales'
 import type { SuggestionItem, SuggestionType } from '@/app/db/schema'
-import { card, cardHeader, sectionLabel } from '@/app/lib/styles'
+import { card, sectionLabel } from '@/app/lib/styles'
 import Button from '@/components/ui/Button'
-
-const fetcher = (url: string) => fetch(url).then(r => r.ok ? r.json() : null)
 
 interface Props {
   applicationId: string
@@ -35,17 +35,13 @@ export default function InsightResume({ applicationId }: Props) {
   const [generating, setGenerating] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [copied, setCopied] = useState<string | null>(null)
-  const [aiConfigured, setAiConfigured] = useState(true)
-
-  useEffect(() => {
-    setAiConfigured(!!getAIConfig()?.apiKey)
-  }, [])
+  const aiConfigured = useAiConfigured()
 
   const { data: row, mutate } = useSWR<SuggestionsRow | null>(
     selectedResumeId
       ? `/api/applications/${applicationId}/resume-suggestions?resumeId=${selectedResumeId}`
       : null,
-    fetcher,
+    fetchJsonOrNull,
   )
 
   const suggestions: SuggestionItem[] = row?.suggestions ?? []

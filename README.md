@@ -108,7 +108,7 @@ Bring your own API key — no platform key required. API keys are stored in your
 | Email | Resend |
 | Rate Limiting | Upstash Redis |
 | Styling | Tailwind CSS v4 |
-| Testing | Vitest (unit) · Playwright (smoke + integration) |
+| Testing | Playwright (smoke + integration) |
 
 ---
 
@@ -185,7 +185,6 @@ npm run dev                   # Dev server / 开发服务器
 npm run build                 # Production build / 生产构建
 npm run db:migrate            # Run migrations / 执行迁移
 npm run db:studio             # Drizzle Studio (database GUI / 数据库可视化)
-npm run test                  # Unit tests / 单元测试 (Vitest)
 npm run test:e2e              # All E2E tests / 完整端对端测试 (Playwright)
 npm run test:e2e:integration  # Integration tests only / 仅集成测试
 npm run test:e2e:ui           # Playwright UI mode
