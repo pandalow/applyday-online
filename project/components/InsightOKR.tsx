@@ -1,11 +1,12 @@
 'use client'
 
-import { useState, useCallback, useEffect } from 'react'
+import { useState, useCallback } from 'react'
 import useSWR from 'swr'
 import { useLocale } from '@/locales'
 import { getAIConfig } from '@/app/lib/aiConfig'
+import { useAiConfigured } from '@/app/lib/useAiConfigured'
 import type { OKRContent } from '@/app/lib/ai/okr'
-import { card, sectionLabel } from '@/app/lib/styles'
+import { card } from '@/app/lib/styles'
 import Button from '@/components/ui/Button'
 
 interface OKRRecord {
@@ -205,11 +206,7 @@ export default function InsightOKR({ applicationId }: Props = {}) {
   const { t } = useLocale()
   const [lang, setLang] = useState<'en' | 'zh'>('en')
   const [filter, setFilter] = useState<'all' | 'missing' | 'done'>('all')
-  const [aiConfigured, setAiConfigured] = useState(true)
-
-  useEffect(() => {
-    setAiConfigured(!!getAIConfig()?.apiKey)
-  }, [])
+  const aiConfigured = useAiConfigured()
 
   const { data, mutate, isLoading } = useSWR<AppEntry[]>(
     '/api/okrs',

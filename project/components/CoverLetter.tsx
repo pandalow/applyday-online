@@ -1,15 +1,15 @@
 'use client'
 
-import { useState, useCallback, useEffect } from 'react'
+import { useState, useCallback } from 'react'
 import useSWR from 'swr'
 import ResumeManager from '@/components/ResumeManager'
 import { getAIConfig } from '@/app/lib/aiConfig'
+import { fetchJsonOrNull } from '@/app/lib/fetcher'
+import { useAiConfigured } from '@/app/lib/useAiConfigured'
 import { useLocale } from '@/locales'
 import type { CoverLetterTone } from '@/app/db/schema'
 import { card, cardHeader, sectionLabel } from '@/app/lib/styles'
 import Button from '@/components/ui/Button'
-
-const fetcher = (url: string) => fetch(url).then(r => r.ok ? r.json() : null)
 
 interface Props {
   applicationId: string
@@ -39,17 +39,13 @@ export default function CoverLetter({ applicationId }: Props) {
   const [editedContent, setEditedContent] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
   const [copied, setCopied] = useState(false)
-  const [aiConfigured, setAiConfigured] = useState(true)
-
-  useEffect(() => {
-    setAiConfigured(!!getAIConfig()?.apiKey)
-  }, [])
+  const aiConfigured = useAiConfigured()
 
   const { data: row, mutate } = useSWR<CoverLetterRow | null>(
     selectedResumeId
       ? `/api/applications/${applicationId}/cover-letter?resumeId=${selectedResumeId}`
       : null,
-    fetcher,
+    fetchJsonOrNull,
     { onSuccess: (data) => { if (data) setEditedContent(data.content) } },
   )
 

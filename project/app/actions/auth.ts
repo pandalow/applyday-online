@@ -6,7 +6,7 @@ import bcrypt from 'bcryptjs'
 import { db } from '@/app/lib/drizzle'
 import { users } from '@/app/db/schema'
 import { eq } from 'drizzle-orm'
-import { createSession, deleteSession, verifyRSASignature } from '@/app/lib/session'
+import { createSession, deleteSession } from '@/app/lib/session'
 import { checkRateLimit } from '@/app/lib/rateLimit'
 
 const LoginSchema = z.object({
@@ -58,32 +58,6 @@ export async function login(state: AuthState, formData: FormData): Promise<AuthS
   }
 
   await createSession(result.id, result.role, result.username)
-  redirect('/app')
-}
-
-// RSA login: username + signed challenge
-export async function rsaLogin(state: AuthState, formData: FormData): Promise<AuthState> {
-  const username = formData.get('username') as string
-  const signature = formData.get('signature') as string
-  const challenge = formData.get('challenge') as string
-
-  if (!username || !signature || !challenge) {
-    return { errors: { general: ['Missing required fields'] } }
-  }
-
-  const user = await db.query.users.findFirst({
-    where: eq(users.username, username),
-  })
-  if (!user || !user.rsaPublicKey) {
-    return { errors: { general: ['RSA login not configured for this user'] } }
-  }
-
-  const isValid = await verifyRSASignature(user.rsaPublicKey, challenge, signature)
-  if (!isValid) {
-    return { errors: { general: ['Invalid RSA signature'] } }
-  }
-
-  await createSession(user.id, user.role, user.username)
   redirect('/app')
 }
 

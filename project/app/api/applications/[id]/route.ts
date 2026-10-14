@@ -1,15 +1,8 @@
 import { type NextRequest } from 'next/server'
 import { db } from '@/app/lib/drizzle'
-import { applications } from '@/app/db/schema'
+import { applications, isApplicationStatus } from '@/app/db/schema'
 import { verifySession } from '@/app/lib/dal'
 import { eq, and } from 'drizzle-orm'
-
-const VALID_STATUSES = ['prepared', 'applied', 'interviewed', 'offered', 'rejected'] as const
-type ApplicationStatus = typeof VALID_STATUSES[number]
-
-function isValidStatus(s: string): s is ApplicationStatus {
-  return (VALID_STATUSES as readonly string[]).includes(s)
-}
 
 export async function GET(
   _request: NextRequest,
@@ -54,7 +47,7 @@ export async function PATCH(
     if (applicationDate !== undefined) updates.applicationDate = new Date(applicationDate)
     if (stageNotes !== undefined)      updates.stageNotes = stageNotes
     if (channel !== undefined)         updates.channel = channel
-    if (status !== undefined && isValidStatus(status)) updates.status = status
+    if (status !== undefined && isApplicationStatus(status)) updates.status = status
 
     if (Object.keys(updates).length === 0) {
       return Response.json(existing)

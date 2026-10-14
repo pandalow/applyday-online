@@ -124,10 +124,6 @@ function normalizeExtracted(raw: ExtractedJD): ExtractedJD {
   return result
 }
 
-function getLLM(provider: AIProvider, apiKey: string, model: string, reasoning: boolean) {
-  return createLLM(provider, apiKey, model, reasoning)
-}
-
 const EXTRACT_PROMPT = new PromptTemplate({
   template: `You are a precise job description parser. Extract structured data from the JD below.
 This parser handles ALL job types — engineering, marketing, finance, HR, design, operations, sales, legal, etc.
@@ -188,7 +184,7 @@ export async function extractJobDescription(
   modelId = 'gpt-4o-mini',
   reasoning = false,
 ): Promise<ExtractedJD> {
-  const model = getLLM(provider, apiKey, modelId, reasoning)
+  const model = createLLM(provider, apiKey, modelId, reasoning)
   const prompt = await EXTRACT_PROMPT.format({ jd_text: jdText })
   const response = await model.invoke(prompt)
 
